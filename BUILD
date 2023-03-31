@@ -10,6 +10,7 @@
 
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 # copybara:uncomment load("//tools/build_defs/license:license.bzl", "license")
+load("//:triton.bzl", "if_not_msvc")
 
 package(
     # copybara:uncomment_begin
@@ -36,6 +37,13 @@ package(
 # 
 # exports_files(["LICENSE"])
 # copybara:uncomment_end
+
+config_setting(
+    name = "compiler_is_msvc",
+    flag_values = {
+        "@bazel_tools//tools/cpp:compiler": "msvc-cl",
+    },
+)
 
 td_library(
     name = "td_files",
@@ -276,7 +284,7 @@ cc_library(
     name = "TritonDialect",
     srcs = glob(["lib/Dialect/Triton/IR/*.cpp"]),
     hdrs = glob(["include/triton/Dialect/Triton/IR/*.h"]),
-    copts = ["-Wno-unused-variable"],  # TODO(manany): fix
+    copts = if_not_msvc(["-Wno-unused-variable"]),
     includes = ["include"],
     deps = [
         ":triton_dialect_inc_gen",
@@ -328,7 +336,7 @@ cc_library(
         "include/triton/Analysis/*.h",
         "include/triton/Dialect/TritonGPU/IR/*.h",
     ]),
-    copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
+    copts = if_not_msvc(["-Wno-unused-variable"]),
     includes = ["include"],
     deps = [
         ":TritonDialect",
@@ -356,7 +364,7 @@ cc_library(
         "lib/Dialect/TritonGPU/Transforms/*.h",
     ]),
     hdrs = glob(["include/triton/Dialect/TritonGPU/Transforms/*.h"]),
-    copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
+    copts = if_not_msvc(["-Wno-unused-variable"]),
     includes = ["include"],
     deps = [
         ":TritonDialect",
@@ -391,7 +399,7 @@ cc_library(
         "include/triton/Tools/Sys/*.hpp",
         "include/triton/Conversion/TritonGPUToLLVM/*.h",
     ]),
-    copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
+    copts = if_not_msvc(["-Wno-unused-variable"]),
     includes = [
         "include",
         "lib/Conversion/TritonGPUToLLVM",
