@@ -1,8 +1,0 @@
-
-[build-system]
-requires = ["setuptools>=40.8.0", "wheel", "cmake>=3.18", "ninja>=1.11.1"]
-
-[tool.autopep8]
-aggressive = 1
-ignore = "E501,E701,E731,W690"
-max_line_length = 88
