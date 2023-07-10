@@ -49,7 +49,7 @@ std::string translateLLVMIRToPTX(llvm::Module &module, int cc, int version) {
   auto *shortPtr =
       static_cast<llvm::cl::opt<bool> *>(options["nvptx-short-ptr"]);
   assert(shortPtr);
-  shortPtr->setValue(true);
+  shortPtr->setValue(false);
   std::string sm = cc == 90 ? "sm_90a" : "sm_" + std::to_string(cc);
   // max PTX version
   int ptxMajor = maxPTX / 10;

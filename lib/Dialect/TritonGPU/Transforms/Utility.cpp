@@ -93,6 +93,11 @@ bool isExpensiveLoadOrStore(Operation *op, Attribute &targetEncoding) {
   // same
   if (isSingleValue(op->getOperand(0)))
     return false;
+  // TODO(manany): Investigate with Openai why the change here
+  // https://github.com/openai/triton/commit/640f3c392184cd14291c1bca6a4795eb0f32a61a
+  // which introduces Case 2 causes breakage to this test
+  // //third_party/py/jax_triton/tests:pallas_test_sm80 --test_filter=test_fused_attention_bwd
+  return true;
   // Case 2: Tensor of pointers has more threads than elements
   // we can presume a high hit-rate that makes it cheap to load
   auto ptrType = op->getOperand(0).getType().cast<RankedTensorType>();
