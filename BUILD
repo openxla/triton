@@ -53,9 +53,9 @@ _no_unused_variable = select({
     "//conditions:default": ["-Wno-unused-variable"],
 })
 
-_no_unused_variable_no_parentheses = select({
+_no_parentheses = select({
     ":compiler_is_msvc": [],
-    "//conditions:default": ["-Wno-unused-variable -Wno-parentheses"],
+    "//conditions:default": ["-Wno-parentheses"],
 })
 
 td_library(
@@ -69,11 +69,29 @@ td_library(
         "@llvm-project//mlir:DestinationStyleOpInterfaceTdFiles",
         "@llvm-project//mlir:FunctionInterfacesTdFiles",
         "@llvm-project//mlir:InferTypeOpInterfaceTdFiles",
+        "@llvm-project//mlir:LLVMOpsTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
         "@llvm-project//mlir:PassBaseTdFiles",
         "@llvm-project//mlir:SideEffectInterfacesTdFiles",
         "@llvm-project//mlir:ViewLikeInterfaceTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "triton_attr_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-attrdef-decls"],
+            "include/triton/Dialect/Triton/IR/TritonAttrDefs.h.inc",
+        ),
+        (
+            ["--gen-attrdef-defs"],
+            "include/triton/Dialect/Triton/IR/TritonAttrDefs.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/Triton/IR/TritonAttrDefs.td",
+    deps = ["td_files"],
 )
 
 gentbl_cc_library(
@@ -90,6 +108,23 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/triton/Dialect/Triton/IR/TritonDialect.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_interfaces_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-attr-interface-decls"],
+            "include/triton/Dialect/Triton/IR/AttrInterfaces.h.inc",
+        ),
+        (
+            ["--gen-attr-interface-defs"],
+            "include/triton/Dialect/Triton/IR/AttrInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/Triton/IR/TritonInterfaces.td",
     deps = ["td_files"],
 )
 
@@ -112,6 +147,15 @@ gentbl_cc_library(
             ["--gen-op-defs"],
             "include/triton/Dialect/Triton/IR/Ops.cpp.inc",
         ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/Triton/IR/TritonOps.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_types_inc_gen",
+    tbl_outs = [
         (
             ["--gen-typedef-decls"],
             "include/triton/Dialect/Triton/IR/Types.h.inc",
@@ -122,24 +166,7 @@ gentbl_cc_library(
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/triton/Dialect/Triton/IR/TritonOps.td",
-    deps = ["td_files"],
-)
-
-gentbl_cc_library(
-    name = "triton_interfaces_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-attr-interface-decls"],
-            "include/triton/Dialect/Triton/IR/AttrInterfaces.h.inc",
-        ),
-        (
-            ["--gen-attr-interface-defs"],
-            "include/triton/Dialect/Triton/IR/AttrInterfaces.cpp.inc",
-        ),
-    ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/triton/Dialect/Triton/IR/TritonInterfaces.td",
+    td_file = "include/triton/Dialect/Triton/IR/TritonTypes.td",
     deps = ["td_files"],
 )
 
@@ -171,6 +198,39 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Triton/Transforms/Combine.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_gpu_attr_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-attrdef-decls"],
+            "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrDefs.h.inc",
+        ),
+        (
+            ["--gen-attrdef-defs"],
+            "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrDefs.cpp.inc",
+        ),
+        (
+            ["--gen-enum-decls"],
+            "include/triton/Dialect/TritonGPU/IR/OpsEnums.h.inc",
+        ),
+        (
+            ["--gen-enum-defs"],
+            "include/triton/Dialect/TritonGPU/IR/OpsEnums.cpp.inc",
+        ),
+        (
+            ["--gen-attr-interface-decls"],
+            "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrInterfaces.h.inc",
+        ),
+        (
+            ["--gen-attr-interface-defs"],
+            "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrDefs.td",
     deps = ["td_files"],
 )
 
@@ -209,19 +269,19 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "triton_gpu_attr_inc_gen",
+    name = "triton_gpu_types_inc_gen",
     tbl_outs = [
         (
-            ["--gen-attrdef-decls"],
-            "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrDefs.h.inc",
+            ["--gen-typedef-decls"],
+            "include/triton/Dialect/TritonGPU/IR/Types.h.inc",
         ),
         (
-            ["--gen-attrdef-defs"],
-            "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrDefs.cpp.inc",
+            ["--gen-typedef-defs"],
+            "include/triton/Dialect/TritonGPU/IR/Types.cpp.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/triton/Dialect/TritonGPU/IR/TritonGPUAttrDefs.td",
+    td_file = "include/triton/Dialect/TritonGPU/IR/TritonGPUTypes.td",
     deps = ["td_files"],
 )
 
@@ -238,6 +298,177 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/triton/Dialect/TritonGPU/Transforms/Passes.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvgpu_attr_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-attrdef-decls"],
+            "include/triton/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc",
+        ),
+        (
+            ["--gen-attrdef-defs"],
+            "include/triton/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/NVGPU/IR/NVGPUAttrDefs.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvgpu_dialect_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-dialect-decls"],
+            "include/triton/Dialect/NVGPU/IR/Dialect.h.inc",
+        ),
+        (
+            ["--gen-dialect-defs"],
+            "include/triton/Dialect/NVGPU/IR/Dialect.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/NVGPU/IR/NVGPUDialect.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvgpu_ops_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-llvmir-conversions"],
+            "include/triton/Dialect/NVGPU/IR/OpsConversions.inc",
+        ),
+        (
+            ["--gen-op-decls"],
+            "include/triton/Dialect/NVGPU/IR/Ops.h.inc",
+        ),
+        (
+            ["--gen-op-defs"],
+            "include/triton/Dialect/NVGPU/IR/Ops.cpp.inc",
+        ),
+        (
+            ["--gen-enum-decls"],
+            "include/triton/Dialect/NVGPU/IR/OpsEnums.h.inc",
+        ),
+        (
+            ["--gen-enum-defs"],
+            "include/triton/Dialect/NVGPU/IR/OpsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/NVGPU/IR/NVGPUOps.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvidia_gpu_attr_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-attrdef-decls"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/TritonNvidiaGPUAttrDefs.h.inc",
+        ),
+        (
+            ["--gen-attrdef-defs"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/TritonNvidiaGPUAttrDefs.cpp.inc",
+        ),
+        (
+            ["--gen-enum-decls"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/OpsEnums.h.inc",
+        ),
+        (
+            ["--gen-enum-defs"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/OpsEnums.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/TritonNvidiaGPU/IR/TritonNvidiaGPUAttrDefs.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvidia_gpu_dialect_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-dialect-decls"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/Dialect.h.inc",
+        ),
+        (
+            ["--gen-dialect-defs"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/Dialect.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/TritonNvidiaGPU/IR/TritonNvidiaGPUDialect.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvidia_gpu_ops_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-op-decls"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/Ops.h.inc",
+        ),
+        (
+            ["--gen-op-defs"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/Ops.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/TritonNvidiaGPU/IR/TritonNvidiaGPUOps.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvidia_gpu_types_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-typedef-decls"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/Types.h.inc",
+        ),
+        (
+            ["--gen-typedef-defs"],
+            "include/triton/Dialect/TritonNvidiaGPU/IR/Types.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/TritonNvidiaGPU/IR/TritonNvidiaGPUTypes.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_nvidia_gpu_transforms_inc_gen",
+    tbl_outs = [
+        (
+            [
+                "--gen-pass-decls",
+                "--name=TritonNvidiaGPU",
+            ],
+            "include/triton/Dialect/TritonNvidiaGPU/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Dialect/TritonNvidiaGPU/Transforms/Passes.td",
+    deps = ["td_files"],
+)
+
+gentbl_cc_library(
+    name = "triton_conversion_nvgpu_to_llvm_passes_inc_gen",
+    tbl_outs = [
+        (
+            [
+                "--gen-pass-decls",
+                "--name=NVGPUToLLVM",
+            ],
+            "include/triton/Conversion/NVGPUToLLVM/Passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/triton/Conversion/NVGPUToLLVM/Passes.td",
     deps = ["td_files"],
 )
 
@@ -290,37 +521,84 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "NVGPUToLLVM",
+    srcs = glob([
+        "lib/Conversion/NVGPUToLLVM/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/triton/Conversion/NVGPUToLLVM/*.h",
+    ]),
+    copts = _no_unused_variable,
+    includes = ["include"],
+    deps = [
+        ":TritonAnalysis",
+        ":TritonDialects",
+        ":TritonGPUToLLVM",
+        ":triton_conversion_nvgpu_to_llvm_passes_inc_gen",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:LLVMDialect",
+        "@llvm-project//mlir:NVVMDialect",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TritonAnalysis",
-    srcs = glob(["lib/Analysis/*.cpp"]),
-    hdrs = glob(["include/triton/Analysis/*.h"]),
+    srcs = [
+        "lib/Analysis/Alias.cpp",
+        "lib/Analysis/Allocation.cpp",
+        "lib/Analysis/AxisInfo.cpp",
+        "lib/Analysis/Membar.cpp",
+        "lib/Analysis/Utility.cpp",
+    ],
+    hdrs = [
+        "include/triton/Analysis/Alias.h",
+        "include/triton/Analysis/Allocation.h",
+        "include/triton/Analysis/AxisInfo.h",
+        "include/triton/Analysis/Membar.h",
+        "include/triton/Analysis/Utility.h",
+        "include/triton/Conversion/MLIRTypes.h",
+        "include/triton/Conversion/TritonGPUToLLVM/PTXAsmFormat.h",
+        "include/triton/Dialect/TritonGPU/Transforms/Utility.h",
+        "include/triton/Dialect/TritonNvidiaGPU/Transforms/Utility.h",
+        "lib/Conversion/TritonGPUToLLVM/Utility.h",
+    ],
     copts = _no_unused_variable,
     includes = ["include"],
     deps = [
         ":TritonDialects",
         ":TritonTools",
-        ":triton_gpu_attr_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
+        "@llvm-project//mlir:ControlFlowDialect",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:GPUDialect",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:LLVMCommonConversion",
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:Transforms",
     ],
 )
 
 cc_library(
     name = "TritonDialects",
     srcs = glob([
+        "lib/Dialect/NVGPU/IR/*.cpp",
         "lib/Dialect/Triton/IR/*.cpp",
         "lib/Dialect/TritonGPU/IR/*.cpp",
+        "lib/Dialect/TritonNvidiaGPU/IR/*.cpp",
     ]) + [
         "include/triton/Analysis/Utility.h",  # Avoid circular dependency.
     ],
     hdrs = glob([
+        "include/triton/Dialect/NVGPU/IR/*.h",
         "include/triton/Dialect/Triton/IR/*.h",
         "include/triton/Dialect/TritonGPU/IR/*.h",
+        "include/triton/Dialect/TritonNvidiaGPU/IR/*.h",
     ]),
     copts = _no_unused_variable,
     includes = ["include"],
@@ -329,25 +607,31 @@ cc_library(
         ":triton_gpu_attr_inc_gen",
         ":triton_gpu_dialect_inc_gen",
         ":triton_gpu_ops_inc_gen",
-        ":triton_gpu_transforms_inc_gen",
+        ":triton_gpu_types_inc_gen",
         ":triton_interfaces_inc_gen",
+        ":triton_nvgpu_attr_inc_gen",
+        ":triton_nvgpu_dialect_inc_gen",
+        ":triton_nvgpu_ops_inc_gen",
+        ":triton_nvidia_gpu_attr_inc_gen",
+        ":triton_nvidia_gpu_dialect_inc_gen",
+        ":triton_nvidia_gpu_ops_inc_gen",
+        ":triton_nvidia_gpu_types_inc_gen",
         ":triton_ops_inc_gen",
+        ":triton_types_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ControlFlowDialect",
         "@llvm-project//mlir:ControlFlowInterfaces",
-        "@llvm-project//mlir:DestinationStyleOpInterface",
         "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:FunctionInterfaces",
         "@llvm-project//mlir:GPUDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:MathDialect",
-        "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:SCFDialect",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
-        "@llvm-project//mlir:Transforms",
     ],
 )
 
@@ -355,23 +639,16 @@ cc_library(
     name = "TritonTransforms",
     srcs = glob(["lib/Dialect/Triton/Transforms/*.cpp"]),
     hdrs = glob(["include/triton/Dialect/Triton/Transforms/*.h"]),
-    copts = ["-Wno-parentheses"],
+    copts = _no_parentheses,
     includes = ["include"],
     deps = [
         ":TritonDialects",
         ":triton_combine_inc_gen",
         ":triton_transforms_inc_gen",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ControlFlowDialect",
-        "@llvm-project//mlir:ControlFlowInterfaces",
-        "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:MathDialect",
         "@llvm-project//mlir:Pass",
-        "@llvm-project//mlir:SCFDialect",
         "@llvm-project//mlir:Support",
-        "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:Transforms",
     ],
     alwayslink = True,  # TritonDialect uses getCanonicalizationPatterns().
@@ -382,9 +659,22 @@ cc_library(
     srcs = glob([
         "lib/Dialect/TritonGPU/Transforms/*.cpp",
         "lib/Dialect/TritonGPU/Transforms/*.h",
+        "lib/Dialect/TritonGPU/Transforms/Pipeliner/*.cpp",
+        "lib/Dialect/TritonGPU/Transforms/Pipeliner/*.h",
     ]),
-    hdrs = glob(["include/triton/Dialect/TritonGPU/Transforms/*.h"]),
-    copts = _no_unused_variable,
+    hdrs = glob([
+        "include/triton/Dialect/TritonGPU/Transforms/*.h",
+    ]) + [
+        "include/triton/Tools/Sys/GetEnv.hpp",
+    ],
+    copts = select({
+        ":compiler_is_msvc": [],
+        "//conditions:default": [
+            "-Wno-reorder-ctor",
+            "-Wno-return-type",
+            "-Wno-unused-variable",
+        ],
+    }),
     includes = ["include"],
     deps = [
         ":TritonAnalysis",
@@ -393,16 +683,15 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:ArithDialect",
-        "@llvm-project//mlir:ControlFlowDialect",
-        "@llvm-project//mlir:ControlFlowInterfaces",
-        "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
-        "@llvm-project//mlir:MathDialect",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:SCFDialect",
+        "@llvm-project//mlir:SCFTransforms",
+        "@llvm-project//mlir:SCFUtils",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -419,14 +708,21 @@ cc_library(
         "include/triton/Tools/Sys/*.hpp",
         "include/triton/Conversion/TritonGPUToLLVM/*.h",
     ]),
-    copts = _no_unused_variable_no_parentheses,
-    includes = [
-        "include",
-        "lib/Conversion/TritonGPUToLLVM",
-    ],
+    copts = select({
+        ":compiler_is_msvc": [],
+        "//conditions:default": [
+            "-Wno-parentheses",
+            "-Wno-reorder-ctor",
+            "-Wno-unused-variable",
+        ],
+    }),
+    includes = ["include"],
     deps = [
         ":TritonAnalysis",
         ":TritonDialects",
+        ":TritonNvidiaGPUTransforms",
+        ":TritonTmaMetadata",
+        ":cuda_compat",
         ":triton_conversion_triton_gpu_to_llvm_passes_inc_gen",
         ":triton_conversion_triton_to_triton_gpu_passes_inc_gen",
         "@llvm-project//llvm:Support",
@@ -455,6 +751,40 @@ cc_library(
 )
 
 cc_library(
+    name = "TritonNvidiaGPUTransforms",
+    srcs = glob([
+        "lib/Dialect/TritonNvidiaGPU/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/triton/Dialect/TritonNvidiaGPU/Transforms/*.h",
+    ]),
+    copts = select({
+        ":compiler_is_msvc": [],
+        "//conditions:default": [
+            "-Wno-ctad-maybe-unsupported",
+            "-Wno-logical-op-parentheses",
+            "-Wno-non-virtual-dtor",
+            "-Wno-return-type",
+            "-Wno-unused-variable",
+        ],
+    }),
+    includes = ["include"],
+    deps = [
+        ":TritonAnalysis",
+        ":TritonDialects",
+        ":TritonGPUTransforms",
+        ":triton_nvidia_gpu_transforms_inc_gen",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Analysis",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:SCFDialect",
+        "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TritonToTritonGPU",
     srcs = glob([
         "lib/Conversion/TritonToTritonGPU/*.h",
@@ -466,18 +796,14 @@ cc_library(
         ":TritonAnalysis",
         ":TritonDialects",
         ":TritonGPUTransforms",
-        ":triton_conversion_triton_gpu_to_llvm_passes_inc_gen",
+        ":TritonTmaMetadata",
         ":triton_conversion_triton_to_triton_gpu_passes_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ControlFlowDialect",
         "@llvm-project//mlir:GPUDialect",
-        "@llvm-project//mlir:IR",
         "@llvm-project//mlir:IndexDialect",
-        "@llvm-project//mlir:LLVMDialect",
-        "@llvm-project//mlir:NVVMDialect",
         "@llvm-project//mlir:Pass",
-        "@llvm-project//mlir:Support",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -486,32 +812,40 @@ cc_library(
     name = "TritonLLVMIR",
     srcs = glob([
         "lib/Target/LLVMIR/*.cpp",
-    ]) + [
-        "include/triton/Tools/Sys/GetEnv.hpp",
-    ],
+        "lib/Target/LLVMIR/*.h",
+    ]),
     hdrs = glob(["include/triton/Target/LLVMIR/*.h"]),
     copts = _no_unused_variable,
     includes = ["include"],
     deps = [
+        ":NVGPUToLLVM",
         ":TritonGPUToLLVM",
+        ":TritonTmaMetadata",
         ":TritonTransforms",
         ":triton_target_llvmir_passes_inc_gen",
+        "@llvm-project//llvm:Analysis",
         "@llvm-project//llvm:BinaryFormat",
         "@llvm-project//llvm:Core",
         "@llvm-project//llvm:IRReader",
+        "@llvm-project//llvm:InstCombine",
         "@llvm-project//llvm:Linker",
+        "@llvm-project//llvm:Passes",
         "@llvm-project//llvm:Support",
+        "@llvm-project//llvm:Target",
+        "@llvm-project//mlir:ArithToLLVM",
         "@llvm-project//mlir:BuiltinToLLVMIRTranslation",
         "@llvm-project//mlir:ConversionPasses",
         "@llvm-project//mlir:ExecutionEngine",
         "@llvm-project//mlir:ExecutionEngineUtils",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:IndexToLLVM",
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:LLVMIRTransforms",
         "@llvm-project//mlir:LLVMToLLVMIRTranslation",
         "@llvm-project//mlir:NVVMToLLVMIRTranslation",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:ROCDLToLLVMIRTranslation",
+        "@llvm-project//mlir:SCFToControlFlow",
         "@llvm-project//mlir:ToLLVMIRTranslation",
         "@llvm-project//mlir:Transforms",
         # copybara:uncomment "//third_party/py/triton/google:find_cuda",
@@ -528,6 +862,7 @@ cc_library(
     deps = [
         ":TritonLLVMIR",
         "@llvm-project//llvm:Core",
+        "@llvm-project//llvm:IPO",
         "@llvm-project//llvm:MC",
         "@llvm-project//llvm:Support",
         "@llvm-project//llvm:Target",
@@ -563,9 +898,25 @@ cc_library(
 )
 
 cc_library(
+    name = "TritonTmaMetadata",
+    hdrs = ["include/triton/Target/PTX/TmaMetadata.h"],
+    includes = ["include"],
+    deps = [
+        "@llvm-project//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "TritonTools",
     hdrs = ["include/triton/Tools/Sys/GetEnv.hpp"],
     includes = ["include"],
+)
+
+cc_library(
+    name = "cuda_compat",
+    hdrs = ["include/triton/Tools/cuda_compat.h"],
+    includes = ["include"],
+    deps = ["@local_config_cuda//cuda:cuda_headers"],
 )
 
 cc_binary(
@@ -573,18 +924,25 @@ cc_binary(
     srcs = [
         "bin/RegisterTritonDialects.h",
         "bin/triton-opt.cpp",
+        "include/triton/Conversion/NVGPUToLLVM/Passes.h",
         "include/triton/Conversion/TritonGPUToLLVM/Passes.h",
         "include/triton/Conversion/TritonToTritonGPU/Passes.h",
+        "include/triton/Dialect/TritonNvidiaGPU/Transforms/Passes.h",
     ],
     includes = ["include"],
     deps = [
+        ":NVGPUToLLVM",
         ":TritonDialects",
         ":TritonGPUToLLVM",
         ":TritonGPUTransforms",
+        ":TritonNvidiaGPUTransforms",
+        ":TritonTmaMetadata",
         ":TritonToTritonGPU",
         ":TritonTransforms",
+        ":triton_conversion_nvgpu_to_llvm_passes_inc_gen",
         ":triton_conversion_triton_gpu_to_llvm_passes_inc_gen",
         ":triton_conversion_triton_to_triton_gpu_passes_inc_gen",
+        ":triton_nvidia_gpu_transforms_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//llvm:ir_headers",
         "@llvm-project//mlir:AllPassesAndDialects",
@@ -597,6 +955,7 @@ cc_binary(
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:LLVMToLLVMIRTranslation",
         "@llvm-project//mlir:MlirOptLib",
+        "@llvm-project//mlir:NVVMDialect",
         "@llvm-project//mlir:Parser",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:Support",
@@ -643,5 +1002,52 @@ cc_binary(
         "@llvm-project//mlir:ToLLVMIRTranslation",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
+    ],
+)
+
+cc_binary(
+    name = "triton-llvm-opt",
+    srcs = [
+        "bin/triton-llvm-opt.cpp",
+        "lib/Target/LLVMIR/LLVMPasses.h",
+    ],
+    includes = [
+        ".",  # because it includes "lib/Target/LLVMIR/LLVMPasses.h"
+        "include",
+    ],
+    deps = [
+        ":TritonLLVMIR",
+        "@llvm-project//llvm:CodeGen",
+        "@llvm-project//llvm:Core",
+        "@llvm-project//llvm:IRReader",
+        "@llvm-project//llvm:Option",
+        "@llvm-project//llvm:Passes",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//llvm:TargetParser",
+    ],
+)
+
+# See go/triton-debug for usage.
+cc_binary(
+    name = "triton-reduce",
+    srcs = [
+        "bin/RegisterTritonDialects.h",
+        "bin/triton-reduce.cpp",
+    ],
+    includes = [
+        "include",
+    ],
+    deps = [
+        ":NVGPUToLLVM",
+        ":TritonDialects",
+        ":TritonGPUToLLVM",
+        ":TritonGPUTransforms",
+        ":TritonNvidiaGPUTransforms",
+        ":TritonToTritonGPU",
+        ":TritonTransforms",
+        "@llvm-project//mlir:AllPassesAndDialects",
+        "@llvm-project//mlir:MlirReduceLib",
+        "@llvm-project//mlir:NVVMDialect",
+        "//third_party/triton/test:TritonTestAnalysis",
     ],
 )

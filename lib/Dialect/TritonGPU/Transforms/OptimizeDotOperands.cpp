@@ -297,8 +297,9 @@ public:
 
     mlir::RewritePatternSet patterns(context);
     patterns.add<ConvertTransConvert>(context);
-    if (triton::gpu::TritonGPUDialect::getComputeCapability(m) >= 80)
-      patterns.add<MoveOpAfterLayoutConversion>(context);
+    // TODO(b/291216607): Fix crashes and uncomment.
+    // if (triton::gpu::TritonGPUDialect::getComputeCapability(m) >= 80)
+    //   patterns.add<MoveOpAfterLayoutConversion>(context);
     patterns.add<FuseTransHopper>(context);
     patterns.add<MMAV3UseRegOperand>(context);
     if (applyPatternsAndFoldGreedily(m, std::move(patterns)).failed())
