@@ -759,7 +759,7 @@ void LoopPipeliner::emitPrologue() {
   OpBuilder builder(forOp);
   // Get init operands for loop carried values
   for (BlockArgument &arg : forOp.getRegionIterArgs()) {
-    OpOperand &operand = forOp.getOpOperandForRegionIterArg(arg);
+    OpOperand &operand = *forOp.getTiedLoopInit(arg);
     setValueMapping(arg, operand.get(), 0);
   }
 
