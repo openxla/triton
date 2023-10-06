@@ -628,7 +628,7 @@ bool CTAPlanner::isElementwiseOp(Operation *op) const {
                 arith::CeilDivUIOp, arith::DivFOp, arith::DivSIOp,
                 arith::DivUIOp, arith::ExtFOp, arith::ExtSIOp, arith::ExtUIOp,
                 arith::FloorDivSIOp, arith::FPToSIOp, arith::FPToUIOp,
-                arith::MaxFOp, arith::MaxSIOp, arith::MaxUIOp, arith::MinFOp,
+                arith::MaximumFOp, arith::MaxSIOp, arith::MaxUIOp, arith::MinimumFOp,
                 arith::MinSIOp, arith::MinUIOp, arith::MulFOp, arith::MulIOp,
                 arith::NegFOp, arith::OrIOp, arith::RemFOp, arith::RemSIOp,
                 arith::RemUIOp, arith::ShLIOp, arith::ShRSIOp, arith::ShRUIOp,

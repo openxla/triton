@@ -647,7 +647,7 @@ def CallOp : TT_Op<"call", [CallOpInterface, /*MemRefsNormalizable, */DeclareOpI
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
     }
-    MutableOperandRange getArgOperandsMutable() {
+    mlir::MutableOperandRange getArgOperandsMutable() {
       return getOperandsMutable();
     }
 

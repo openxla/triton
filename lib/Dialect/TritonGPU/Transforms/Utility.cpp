@@ -597,7 +597,7 @@ struct ForOpDeadArgElimination : public OpRewritePattern<scf::ForOp> {
         Value yieldOperand =
             forOwner.getBody()->getTerminator()->getOperand(iterIdx);
         markLive(yieldOperand);
-        markLive(forOwner.getIterOperands()[iterIdx]);
+        markLive(forOwner.getInitArgs()[iterIdx]);
       }
     }
     SmallVector<unsigned> deadArg;

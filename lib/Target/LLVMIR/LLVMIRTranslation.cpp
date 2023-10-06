@@ -2,7 +2,6 @@
 #include "LLVMPasses.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
-#include "mlir/Conversion/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
@@ -256,19 +255,6 @@ static std::map<std::string, std::string> getExternLibs(mlir::ModuleOp module) {
       funcs.push_back(func);
   });
 
-  for (LLVM::LLVMFuncOp func : funcs) {
-    if (auto libnameAttr = func->getDiscardableAttr("libname")) {
-      auto name = libnameAttr.dyn_cast<StringAttr>();
-      auto path = func.getOperation()
-                      ->getDiscardableAttr("libpath")
-                      .dyn_cast<StringAttr>();
-      if (name) {
-        std::string libName = name.str();
-        externLibs[libName] = path.str();
-      }
-    }
-  }
-
   if (auto externsAttr = module->getDiscardableAttr("triton_gpu.externs")) {
     for (auto &attr : externsAttr.cast<DictionaryAttr>()) {
       externLibs[attr.getName().strref().trim().str()] =
@@ -287,10 +273,8 @@ static std::map<std::string, std::string> getExternLibs(mlir::ModuleOp module) {
     // Search for libdevice relative to its library path if used from Python
     // Then native code is in `triton/_C/libtriton.so` and libdevice in
     // `triton/third_party/cuda/lib/libdevice.10.bc`
-    static const auto this_library_path = getThisLibraryPath();
     static const auto runtime_path =
-        this_library_path.parent_path().parent_path() / "third_party" / "cuda" /
-        "lib" / "libdevice.10.bc";
+        fs::path(PathToLibdevice()) / "libdevice.10.bc";
     if (fs::exists(runtime_path)) {
       externLibs.try_emplace(libdevice, runtime_path.string());
     } else {
