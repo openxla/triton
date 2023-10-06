@@ -252,8 +252,9 @@ public:
 
     mlir::RewritePatternSet patterns(context);
     patterns.add<ConvertTransConvert>(context);
-    if (triton::gpu::TritonGPUDialect::getComputeCapability(m) >= 80)
-      patterns.add<MoveOpAfterLayoutConversion>(context);
+    // TODO(b/283035396): Fix CUDA_ERROR_MISALIGNED_ADDRESS and uncomment.
+    // if (triton::gpu::TritonGPUDialect::getComputeCapability(m) >= 80)
+    //   patterns.add<MoveOpAfterLayoutConversion>(context);
     patterns.add<FuseTransHopper>(context);
     if (applyPatternsAndFoldGreedily(m, std::move(patterns)).failed())
       signalPassFailure();
