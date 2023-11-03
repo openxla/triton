@@ -7,7 +7,15 @@ from .matmul_perf_model import early_config_prune, estimate_matmul_time
 _ordered_datatypes = [torch.int8, torch.float16, torch.bfloat16, torch.float32]
 
 
+def upcast_if_fp8(a):
+    if "fp8" in str(a):
+        return torch.float16
+    return a
+
+
 def get_higher_dtype(a, b):
+    a = upcast_if_fp8(a)
+    b = upcast_if_fp8(b)
     if a is b:
         return a
 
@@ -80,12 +88,11 @@ def _kernel(A, B, C, M, N, K,
             stride_am, stride_ak,
             stride_bk, stride_bn,
             stride_cm, stride_cn,
-            dot_out_dtype: tl.constexpr,
+            acc_dtype: tl.constexpr,
             allow_tf32: tl.constexpr,
             fp8_fast_accum: tl.constexpr,
             BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
-            GROUP_M: tl.constexpr, SPLIT_K: tl.constexpr, EVEN_K: tl.constexpr,
-            AB_DTYPE: tl.constexpr, C_DTYPE: tl.constexpr
+            GROUP_M: tl.constexpr, SPLIT_K: tl.constexpr, EVEN_K: tl.constexpr, AB_DTYPE: tl.constexpr
             ):
     # matrix multiplication
     pid = tl.program_id(0)
@@ -107,7 +114,7 @@ def _kernel(A, B, C, M, N, K,
     # pointers
     A = A + (ram[:, None] * stride_am + rk[None, :] * stride_ak)
     B = B + (rk[:, None] * stride_bk + rbn[None, :] * stride_bn)
-    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=dot_out_dtype)
+    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=acc_dtype)
     for k in range(0, tl.cdiv(K, BLOCK_K * SPLIT_K)):
         if EVEN_K:
             a = tl.load(A)
@@ -121,12 +128,12 @@ def _kernel(A, B, C, M, N, K,
             a = a.to(AB_DTYPE)
             b = b.to(AB_DTYPE)
         if fp8_fast_accum:
-            acc = tl.dot(a, b, acc, out_dtype=dot_out_dtype, allow_tf32=allow_tf32)
+            acc = tl.dot(a, b, acc, out_dtype=acc_dtype, allow_tf32=allow_tf32)
         else:
-            acc += tl.dot(a, b, out_dtype=dot_out_dtype, allow_tf32=allow_tf32)
+            acc += tl.dot(a, b, out_dtype=acc_dtype, allow_tf32=allow_tf32)
         A += BLOCK_K * SPLIT_K * stride_ak
         B += BLOCK_K * SPLIT_K * stride_bk
-    acc = acc.to(C_DTYPE)
+    acc = acc.to(C.dtype.element_ty)
     # rematerialize rm and rn to save registers
     rm = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
     rn = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
@@ -145,7 +152,7 @@ class _matmul(torch.autograd.Function):
     _locks = {}
 
     @staticmethod
-    def _call(a, b, dot_out_dtype, allow_tf32, fp8_fast_accum, c_dtype):
+    def _call(a, b, acc_dtype, allow_tf32, fp8_fast_accum, output_dtype):
         device = a.device
         # handle non-contiguous inputs if necessary
         if a.stride(0) > 1 and a.stride(1) > 1:
@@ -158,38 +165,37 @@ class _matmul(torch.autograd.Function):
         _, N = b.shape
 
         # common type between a and b
-        ab_dtype = get_higher_dtype(a.dtype if a.dtype not in [tl.float8e4nv, tl.float8e4b15, tl.float8e5] else torch.float16,
-                                    b.dtype if b.dtype not in [tl.float8e4nv, tl.float8e4b15, tl.float8e5] else torch.float16)
+        ab_dtype = get_higher_dtype(a.dtype, b.dtype)
 
         # allocates output
-        if (c_dtype is None):
-            c_dtype = ab_dtype
+        if (output_dtype is None):
+            output_dtype = ab_dtype
 
-        c = torch.empty((M, N), device=device, dtype=c_dtype)
+        c = torch.empty((M, N), device=device, dtype=output_dtype)
 
-        torch_tl_type_converter = {torch.float16: tl.float16, torch.bfloat16: tl.bfloat16, torch.float32: tl.float32, torch.int8: tl.int8, torch.int32: tl.int32}
+        # Allowed types for acc_type given the types of a and b.
+        supported_acc_dtypes = {
+            torch.float16: (torch.float32, torch.float16),
+            torch.bfloat16: (torch.float32, torch.bfloat16),
+            torch.float32: (torch.float32,),
+            torch.int8: (torch.int32,)
+        }
 
-        # Allowed types for dot_out_type given the types of a and b.
-        type_preference_list = {}
-        type_preference_list[torch.float16] = [torch.float32, torch.float16]
-        type_preference_list[torch.bfloat16] = [torch.float32, torch.bfloat16]
-        type_preference_list[torch.float32] = [torch.float32]
-        type_preference_list[torch.int8] = [torch.int32]
-        if dot_out_dtype is None:
-            dot_out_dtype = type_preference_list[c_dtype][0]
+        if acc_dtype is None:
+            acc_dtype = supported_acc_dtypes[ab_dtype][0]
         else:
-            assert isinstance(dot_out_dtype, torch.dtype), "dot_out_dtype must be a torch.dtype"
-            assert dot_out_dtype in type_preference_list[a.dtype], "dot_out_dtype not compatible with the type of a"
-            assert dot_out_dtype in type_preference_list[b.dtype], "dot_out_dtype not compatible with the type of b"
+            assert isinstance(acc_dtype, torch.dtype), "acc_dtype must be a torch.dtype"
+            assert acc_dtype in supported_acc_dtypes[a.dtype], "acc_dtype not compatible with the type of a"
+            assert acc_dtype in supported_acc_dtypes[b.dtype], "acc_dtype not compatible with the type of b"
 
-        dot_out_dtype = torch_tl_type_converter[dot_out_dtype]
-        ab_dtype = torch_tl_type_converter[ab_dtype]
-        c_dtype = torch_tl_type_converter[c_dtype]
+        def to_tl_type(ty):
+            return getattr(tl, str(ty).split(".")[-1])
+        acc_dtype = to_tl_type(acc_dtype)
+        ab_dtype = to_tl_type(ab_dtype)
+        output_dtype = to_tl_type(output_dtype)
 
-        # In this cases, there is no need to manually convert types to ab_dtype.
+        # Tensor cores support input with mixed float8 types.
         if a.dtype in [tl.float8e4nv, tl.float8e5] and b.dtype in [tl.float8e4nv, tl.float8e5]:
-            ab_dtype = None
-        if a.dtype in [torch.int8] and b.dtype in [torch.int8]:
             ab_dtype = None
         # launch kernel
         grid = lambda META: (cdiv(M, META['BLOCK_M']) * cdiv(N, META['BLOCK_N']), META['SPLIT_K'])
@@ -197,15 +203,15 @@ class _matmul(torch.autograd.Function):
                       a.stride(0), a.stride(1),
                       b.stride(0), b.stride(1),
                       c.stride(0), c.stride(1),
-                      dot_out_dtype=dot_out_dtype,
+                      acc_dtype=acc_dtype,
                       allow_tf32=allow_tf32,
                       fp8_fast_accum=fp8_fast_accum,
-                      GROUP_M=8, AB_DTYPE=ab_dtype, C_DTYPE=c_dtype)
+                      GROUP_M=8, AB_DTYPE=ab_dtype)
         return c
 
     @staticmethod
-    def forward(ctx, a, b, dot_out_dtype=None, allow_tf32=True, fp8_fast_accum=True, c_dtype=None):
-        return _matmul._call(a, b, dot_out_dtype=dot_out_dtype, allow_tf32=allow_tf32, fp8_fast_accum=fp8_fast_accum, c_dtype=c_dtype)
+    def forward(ctx, a, b, acc_dtype=None, allow_tf32=True, fp8_fast_accum=True, output_dtype=None):
+        return _matmul._call(a, b, acc_dtype=acc_dtype, allow_tf32=allow_tf32, fp8_fast_accum=fp8_fast_accum, output_dtype=output_dtype)
 
 
 matmul = _matmul.apply
