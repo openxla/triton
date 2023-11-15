@@ -9,8 +9,10 @@
 # )
 # 
 # glob_lit_tests(
+#     name = "all_tests",
 #     data = [
 #         "@llvm-project//llvm:FileCheck",
+#         "//:triton-llvm-opt",
 #         "//:triton-opt",
 #     ],
 #     driver = "@llvm-project//mlir:run_lit.sh",
@@ -19,10 +21,15 @@
 #         "Target/tritongpu_to_llvmir_noinline.mlir",
 #         "Target/tritongpu_to_llvmir.mlir",
 #         "Target/tritongpu_to_ptx.mlir",
-#         # TODO(b/283035396): broken because pattern is disabled by cl532546169.patch.
+#         # TODO(b/283035396): broken by cl536931041.patch
 #         "TritonGPU/dot-operands.mlir",
+#         # TODO(b/304200586): hopper-only integration issues
+#         "TritonGPU/wspipeline.mlir",
 #     ],
-#     test_file_exts = ["mlir"],
+#     test_file_exts = [
+#         "mlir",
+#         "ll",
+#     ],
 # )
 # 
 # build_test(
@@ -39,7 +46,6 @@
 #         "//:TritonTools",
 #         "//:TritonTransforms",
 #         "//:triton-opt",
-#         "//:triton-translate",
 #     ],
 # )
 # copybara:uncomment_end
@@ -48,7 +54,6 @@ cc_library(
     name = "TritonTestAnalysis",
     srcs = glob(["lib/Analysis/*.cpp"]),
     deps = [
-        "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:GPUDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",

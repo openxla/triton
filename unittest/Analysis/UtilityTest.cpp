@@ -4,7 +4,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "triton/Analysis/Utility.h"
-#include <gtest/gtest.h>
+#include "<gtest/gtest.h>"
 
 namespace mlir {
 

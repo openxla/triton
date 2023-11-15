@@ -3,7 +3,7 @@
 #include "mlir/IR/Builders.h"
 #include "triton/Dialect/Triton/IR/Dialect.h"
 
-#include <gtest/gtest.h>
+#include "<gtest/gtest.h>"
 
 namespace mlir {
 namespace triton {

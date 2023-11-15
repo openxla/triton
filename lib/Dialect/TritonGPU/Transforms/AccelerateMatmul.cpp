@@ -304,8 +304,10 @@ public:
     } else {
 
       // convert operands
-      int minBitwidth =
-          std::min(computeOrigBitWidth(a), computeOrigBitWidth(b));
+      // TODO(b/296812125): Fix minBitwidth issue upstream and uncomment.
+      // int minBitwidth =
+      //     std::min(computeOrigBitWidth(a), computeOrigBitWidth(b));
+      int minBitwidth = 0;
       Type minType = IntegerType::get(ctx, minBitwidth);
       // convert A operand
       auto newAEncoding = ttg::DotOperandEncodingAttr::get(

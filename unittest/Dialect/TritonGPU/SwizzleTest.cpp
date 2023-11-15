@@ -1,5 +1,5 @@
 #include "triton/Dialect/TritonGPU/IR/Dialect.h"
-#include <gtest/gtest.h>
+#include "<gtest/gtest.h>"
 
 using namespace mlir;
 using mlir::triton::gpu::SharedEncodingAttr;
