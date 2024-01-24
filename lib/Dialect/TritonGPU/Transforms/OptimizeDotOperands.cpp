@@ -7,7 +7,19 @@
 #include "triton/Dialect/TritonGPU/IR/Dialect.h"
 #include "triton/Dialect/TritonGPU/Transforms/Passes.h"
 #include "triton/Dialect/TritonGPU/Transforms/Utility.h"
+#include <algorithm>
+#include <cstdlib>
+#include <cctype>
 #include <memory>
+#include <string>
+
+inline bool isPipeliningEnabled() {
+  const char *s = std::getenv("ENABLE_PIPELINING");
+  std::string str(s ? s : "");
+  std::transform(str.begin(), str.end(), str.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return (str == "on" || str == "true" || str == "1");
+}
 
 using namespace mlir;
 namespace {
@@ -297,7 +309,9 @@ public:
 
     mlir::RewritePatternSet patterns(context);
     patterns.add<ConvertTransConvert>(context);
-    if (triton::gpu::TritonGPUDialect::getComputeCapability(m) >= 80)
+    // TODO(b/291216607): Fix crashes and enable by default.
+    if (isPipeliningEnabled() &&
+        mlir::triton::gpu::TritonGPUDialect::getComputeCapability(m) >= 80)
       patterns.add<MoveOpAfterLayoutConversion>(context);
     patterns.add<FuseTransHopper>(context);
     patterns.add<MMAV3UseRegOperand>(context);

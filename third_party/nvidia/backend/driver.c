@@ -1,4 +1,4 @@
-#include "cuda.h"
+#include "triton/Tools/cuda_compat.h"
 #include <dlfcn.h>
 #include <stdbool.h>
 #define PY_SSIZE_T_CLEAN
