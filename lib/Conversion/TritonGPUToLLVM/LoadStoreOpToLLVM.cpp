@@ -7,6 +7,7 @@
 #include "triton/Dialect/TritonGPU/Transforms/Utility.h"
 #include "triton/Dialect/TritonNvidiaGPU/Transforms/Utility.h"
 #include "triton/Target/PTX/TmaMetadata.h"
+#include "triton/Tools/cuda_compat.h"
 
 #include <numeric>
 
