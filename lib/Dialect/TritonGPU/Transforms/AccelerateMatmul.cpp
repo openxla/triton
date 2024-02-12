@@ -24,7 +24,7 @@ using ttg::SliceEncodingAttr;
 // supported
 static int getMMAVersionSafe(int computeCapability, tt::DotOp op) {
   int baseVersion = 0;
-  if (computeCapability < 75) {
+  if (computeCapability < 80) {
     baseVersion = 1;
   } else if (computeCapability < 90) {
     baseVersion = 2;
@@ -311,8 +311,10 @@ public:
     } else {
 
       // convert operands
-      int minBitwidth =
-          std::min(computeOrigBitWidth(a), computeOrigBitWidth(b));
+      // TODO(b/296812125): Fix minBitwidth issue upstream and uncomment.
+      // int minBitwidth =
+      //     std::min(computeOrigBitWidth(a), computeOrigBitWidth(b));
+      int minBitwidth = 0;
       Type minType = IntegerType::get(ctx, minBitwidth);
       // convert A operand
       auto newAEncoding = ttg::DotOperandEncodingAttr::get(

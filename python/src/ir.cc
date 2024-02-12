@@ -1552,29 +1552,36 @@ void init_triton_ir(py::module &&m) {
       .def("enable_debug",
            [](mlir::PassManager &self) {
              auto *context = self.getContext();
-             context->printOpOnDiagnostic(true);
-             context->printStackTraceOnDiagnostic(true);
-             context->disableMultithreading();
-             context->getDiagEngine().registerHandler(
-                 [](mlir::Diagnostic &diag) {
-                   llvm::outs() << diag << "\n";
-                   return mlir::success();
-                 });
-
-             if (!mlir::triton::tools::getBoolEnv("MLIR_ENABLE_DUMP"))
-               return;
-             auto printingFlags = mlir::OpPrintingFlags();
-             printingFlags.elideLargeElementsAttrs(16);
-             printingFlags.enableDebugInfo();
-             auto print_always = [](mlir::Pass *, mlir::Operation *) {
-               return true;
-             };
-             self.enableIRPrinting(
-                 /*shouldPrintBeforePass=*/print_always,
-                 /*shouldPrintAfterPass=*/print_always,
-                 /*printModuleScope=*/true,
-                 /*printAfterOnlyOnChange=*/false,
-                 /*printAfterOnlyOnFailure*/ true, llvm::dbgs(), printingFlags);
+             bool have_diagnostics =
+                 mlir::triton::tools::getBoolEnv("MLIR_ENABLE_DIAGNOSTICS");
+             bool have_dump = mlir::triton::tools::getBoolEnv("MLIR_ENABLE_DUMP");
+             if (have_diagnostics || have_dump) {
+               context->disableMultithreading();
+             }
+             if (have_diagnostics) {
+               context->printOpOnDiagnostic(true);
+               context->printStackTraceOnDiagnostic(true);
+               context->getDiagEngine().registerHandler(
+                   [](mlir::Diagnostic &diag) {
+                     llvm::outs() << diag << "\n";
+                     return mlir::success();
+                   });
+             }
+             if (have_dump) {
+               auto printingFlags = mlir::OpPrintingFlags();
+               printingFlags.elideLargeElementsAttrs(16);
+               printingFlags.enableDebugInfo();
+               auto print_always = [](mlir::Pass *, mlir::Operation *) {
+                 return true;
+               };
+               self.enableIRPrinting(
+                   /*shouldPrintBeforePass=*/print_always,
+                   /*shouldPrintAfterPass=*/print_always,
+                   /*printModuleScope=*/true,
+                   /*printAfterOnlyOnChange=*/false,
+                   /*printAfterOnlyOnFailure*/ true, llvm::dbgs(),
+                   printingFlags);
+             }
            })
       .def("run", [](mlir::PassManager &self, mlir::ModuleOp &mod) {
         // TODO: maybe dump module to file and print error for better
