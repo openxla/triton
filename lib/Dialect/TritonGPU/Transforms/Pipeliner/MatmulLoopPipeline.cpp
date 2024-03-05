@@ -159,6 +159,8 @@ allTransitiveUsesHaveDotEncoding(Value val,
       auto dotOpEnc = convertLayout.getType()
                           .getEncoding()
                           .dyn_cast<ttg::DotOperandEncodingAttr>();
+      if (!dotOpEnc)
+        return false;
       auto srcTensorType = val.getType().cast<RankedTensorType>();
       auto CTALayout = ttg::getCTALayout(srcTensorType.getEncoding());
       auto order = ttg::getOrder(srcTensorType.getEncoding());
