@@ -1471,7 +1471,7 @@ AMDMfmaEncodingAttr::getMFMAInstrShapeForOperands(int kWidth, int opIdx) const {
   int kGroups = -1;
   if (mDim == nDim)
     kGroups = waveSize / mDim;
-  if (mDim == 64 && nDim == 4 || mDim == 4 && nDim == 64)
+  if ((mDim == 64 && nDim == 4) || (mDim == 4 && nDim == 64))
     kGroups = 1;
   int64_t kDim = kWidth * kGroups;
   if (opIdx == 0)
@@ -1530,6 +1530,7 @@ AMDMfmaEncodingAttr::getShapePerCTATileForDotOperands(ArrayRef<int64_t> shape,
     return {32, parentShapePerCTA[1]};
   } else {
     assert(0 && "DotOperandEncodingAttr opIdx must be 0 or 1");
+    return {};
   }
 }
 
