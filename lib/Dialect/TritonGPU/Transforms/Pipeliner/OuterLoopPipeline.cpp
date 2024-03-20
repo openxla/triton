@@ -55,7 +55,7 @@ createSchedule(scf::ForOp forOp, int numStages) {
 static void hoistAllocAndConst(scf::ForOp forOp) {
   SmallVector<Operation *> toHoist;
   for (Operation &op : forOp.getBody()->without_terminator()) {
-    if (isa<ttg::LocalAllocOp, arith::ConstantOp>(op))
+    if (isa<arith::ConstantOp>(op))
       toHoist.push_back(&op);
   }
   for (Operation *op : toHoist) {
