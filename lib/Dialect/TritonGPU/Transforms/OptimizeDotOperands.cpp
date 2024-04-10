@@ -111,7 +111,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Only consider conversions to dot operand.
     auto cvtTy = cvt.getType().cast<RankedTensorType>();
-    if (!cvtTy.getEncoding().isa<DotOperandEncodingAttr>())
+    auto dotOpEnc = cvtTy.getEncoding().dyn_cast<DotOperandEncodingAttr>();
+    if (!dotOpEnc)
       return failure();
 
     auto src = cvt.getSrc().getDefiningOp();
@@ -126,6 +127,12 @@ public:
                 [](Type ty) { return ty.isa<RankedTensorType>(); }))
       return failure();
 
+    // Quick handling to fix loading issues when computing the original
+    // bitwidth is unable to realize that there is a mixed-precision dot
+    // (hence kWidth = 1) but wants to hoist through the type conversion.
+    if (isa<arith::ExtFOp>(src) && dotOpEnc.getKWidth() == 1)
+        return failure();
+
     // Only consider custom conversions or arith ops.
     // TODO(jlebar): Is this too restrictive?
     if (!isa<FpToFpOp, BitcastOp>(src) && !isPureUnaryInlineAsm(src) &&
@@ -137,6 +144,14 @@ public:
     // supported.
     if (isa<arith::TruncIOp, arith::TruncFOp, arith::SelectOp>(src))
       return failure();
+
+    // Don't hoist through u1 -> fp casts as they aren't supported in
+    // ElementwiseOpToLLVM::reorderValues().
+    if (isa<arith::UIToFPOp>(src)) {
+      Type srcType = getElementTypeOrSelf(src->getOperand(0));
+      if (srcType.isInteger(1))
+        return failure();
+    }
 
     // Check that the conversion is transitively dependent on a load, and all
     // operations between the load and the conversion are layout preserving.

@@ -1,4 +1,4 @@
-﻿#include "NVGPUToLLVM/Passes.h"
+#include "NVGPUToLLVM/Passes.h"
 #include "TritonNVIDIAGPUToLLVM/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"

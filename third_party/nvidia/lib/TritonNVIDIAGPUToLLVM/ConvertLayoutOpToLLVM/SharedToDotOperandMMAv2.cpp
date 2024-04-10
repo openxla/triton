@@ -495,6 +495,8 @@ Type getSharedMemTy(Type argType) {
     return type::f32Ty(ctx);
   else if (argType.getIntOrFloatBitWidth() == 8)
     return type::i8Ty(ctx);
+  else if (argType.getIntOrFloatBitWidth() == 16)
+    return type::i16Ty(ctx);
   else
     llvm::report_fatal_error("mma16816 data type not supported");
 }
