@@ -381,8 +381,7 @@ void init_triton_ir(py::module &&m) {
              llvm::raw_string_ostream os(str);
              auto printingFlags = OpPrintingFlags();
              bool dumpLoc = !::triton::tools::getBoolEnv("USE_TTGIR_LOC");
-             if (dumpLoc)
-               printingFlags.enableDebugInfo();
+             if (dumpLoc) printingFlags.enableDebugInfo();
              self->print(os, printingFlags);
              return str;
            })
@@ -448,8 +447,7 @@ void init_triton_ir(py::module &&m) {
              llvm::raw_string_ostream os(str);
              auto printingFlags = OpPrintingFlags();
              bool dumpLoc = !::triton::tools::getBoolEnv("USE_TTGIR_LOC");
-             if (dumpLoc)
-               printingFlags.enableDebugInfo();
+             if (dumpLoc) printingFlags.enableDebugInfo();
              self.print(os, printingFlags);
              return str;
            })
@@ -704,7 +702,7 @@ void init_triton_ir(py::module &&m) {
       .def("get_int1_ty",
            [](TritonOpBuilder &self) -> Type {
              return self.getBuilder().getI1Type();
-           }) // or ret::copy?
+           })  // or ret::copy?
       .def("get_int8_ty",
            [](TritonOpBuilder &self) -> Type {
              return self.getBuilder().getI8Type();
@@ -1614,8 +1612,10 @@ void init_triton_ir(py::module &&m) {
                             return storage.back().c_str();
                           });
 
+#ifndef NDEBUG
           ::llvm::DebugFlag = true;
           ::llvm::setCurrentDebugTypes(debugTypes.data(), debugTypes.size());
+#endif
         }
 
         if (failed(self.run(mod.getOperation())))
@@ -1629,8 +1629,7 @@ void init_triton_env_vars(py::module &m) {
           std::map<std::string, std::string> ret;
           for (const auto &envVar : CACHE_INVALIDATING_ENV_VARS) {
             auto strVal = triton::tools::getStrEnv(envVar);
-            if (strVal.empty())
-              continue;
+            if (strVal.empty()) continue;
             auto boolV = triton::tools::isEnvValueBool(strVal);
             if (boolV.has_value())
               ret[envVar] = boolV.value() ? "true" : "false";

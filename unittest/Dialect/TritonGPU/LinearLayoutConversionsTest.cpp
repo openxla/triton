@@ -3,7 +3,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "triton/Dialect/TritonGPU/IR/Dialect.h"
 
-#include <gmock/gmock.h>
+#include "testing/base/public/gmock.h"
 #include <gtest/gtest.h>
 
 namespace mlir {

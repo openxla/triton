@@ -686,6 +686,16 @@ class JITFunction(KernelInterface[T]):
             grid_1 = grid[1] if grid_size > 1 else 1
             grid_2 = grid[2] if grid_size > 2 else 1
 
+            bound_vals = tuple(bound_args.values())
+            config = self._get_config(*bound_vals)
+            non_constexpr_vals = [
+                (sig_and_spec[p.num], v)
+                for (v, p) in zip(bound_vals, self.params)
+                if not p.is_constexpr and
+                p.num not in config.equal_to_1 and
+                v is not None
+            ]
+
             # launch kernel
             launch_metadata = kernel.launch_metadata(grid, stream, *non_constexpr_vals)
             kernel.run(grid_0, grid_1, grid_2, stream, kernel.function, kernel.packed_metadata, launch_metadata,

@@ -25,7 +25,7 @@ using ttg::SliceEncodingAttr;
 // Get the highest version supported for the hardware and the dot.
 static int getMMAVersionSafe(int computeCapability, tt::DotOp op) {
   int baseVersion = 0;
-  if (computeCapability < 75) {
+  if (computeCapability < 80) {
     baseVersion = 1;
   } else if (computeCapability < 90) {
     baseVersion = 2;
