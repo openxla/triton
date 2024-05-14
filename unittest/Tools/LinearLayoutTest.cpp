@@ -2,7 +2,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <gmock/gmock.h>
+#include "testing/base/public/gmock.h"
 #include <gtest/gtest.h>
 #include <iterator>
 
