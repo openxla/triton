@@ -25,7 +25,7 @@ using ttg::SliceEncodingAttr;
 // Get the highest version supported for the hardware and the dot.
 static int getMMAVersionSafe(int computeCapability, tt::DotOp op) {
   int baseVersion = 0;
-  if (computeCapability < 75) {
+  if (computeCapability < 80) {
     baseVersion = 1;
   } else if (computeCapability < 90) {
     baseVersion = 2;
@@ -133,6 +133,15 @@ class BlockedToMMA : public mlir::RewritePattern {
   mutable llvm::DenseMap<Operation *, unsigned> dotOpInstNs;
 
   static bool bwdFilter(Operation *op) {
+    // Dot operand layout assignment to Predicates are not currently supported
+    // during lowering from TritonGPU to LLVM in Triton for MMA cases. This
+    // condition limits visibility of the original bit-width so that predicate
+    // are not considered, hence, kwidth can never be = 32.
+    if (isa<arith::UIToFPOp>(op)) {
+      Type srcType = getElementTypeOrSelf(op->getOperand(0));
+      if (srcType.isInteger(1))
+        return false;
+    }
     return op->getNumOperands() == 1 &&
            (isa<tt::FpToFpOp, tt::BitcastOp, ttg::ConvertLayoutOp>(op) ||
             isPureUnaryInlineAsm(op) ||
