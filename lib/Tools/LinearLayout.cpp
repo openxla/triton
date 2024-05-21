@@ -397,10 +397,11 @@ LinearLayout LinearLayout::compose(const LinearLayout &outer) const {
       for (auto [outDim, b] : llvm::zip(getOutDimNames(), basis)) {
         bases.push_back({outDim, b});
       }
-      auto newBases = outer.apply(bases);
-      auto newBasesRange = llvm::make_second_range(newBases);
+
+      auto outerBases =
+          llvm::to_vector(llvm::make_second_range(outer.apply(bases)));
       newInDimBases.push_back(
-          std::vector<int32_t>(newBasesRange.begin(), newBasesRange.end()));
+          std::vector<int32_t>(outerBases.begin(), outerBases.end()));
     }
   }
   return LinearLayout(std::move(newBases), outer.getOutDimNames());

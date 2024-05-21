@@ -1613,8 +1613,10 @@ void init_triton_ir(py::module &&m) {
                             return storage.back().c_str();
                           });
 
+#ifndef NDEBUG
           ::llvm::DebugFlag = true;
           ::llvm::setCurrentDebugTypes(debugTypes.data(), debugTypes.size());
+#endif
         }
 
         bool haveTiming = ::triton::tools::getBoolEnv("MLIR_ENABLE_TIMING");
