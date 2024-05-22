@@ -228,6 +228,19 @@ static SmallVector<unsigned> eraseOrder(ArrayRef<unsigned> order,
   return resOrder;
 }
 
+SmallVector<unsigned> getWarpOrder(Attribute layout) {
+  auto order = getOrder(layout);
+  if (auto mmaLayout = dyn_cast<NvidiaMmaEncodingAttr>(layout)) {
+    if (mmaLayout.isHopper()) {
+      // Hopper MMA instructions force a warp order of [0, 1].
+      auto it = std::find(order.begin(), order.end(), 0);
+      order.erase(it);
+      order.insert(order.begin(), 0);
+    }
+  }
+  return order;
+}
+
 SmallVector<unsigned> getOrder(Attribute layout) {
   if (auto blockedLayout = dyn_cast<BlockedEncodingAttr>(layout)) {
     return SmallVector<unsigned>(blockedLayout.getOrder().begin(),
