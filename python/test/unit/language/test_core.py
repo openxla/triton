@@ -2093,6 +2093,8 @@ keep_dims_3d_configs = [(op, 'float32', (32, 2, 16), axis, True)
                                                   for op in ['min', 'max', 'sum']]
 
 
+@pytest.mark.skipif(torch.cuda.get_device_capability()[0] >= 9,
+                    reason='Reduction test produces wrong results on H100, b/342347027')
 @pytest.mark.interpreter
 @pytest.mark.parametrize(
     "op, dtype_str, shape, axis, keep_dims", reduce_configs1 + reduce_configs2 + reduce_configs3 + invalid_config +

@@ -74,17 +74,18 @@ struct ArithConstantSplatOpConversion
     auto values = mlir::dyn_cast<SplatElementsAttr>(op.getValue());
     auto elemType = values.getElementType();
     Attribute val;
-    if (type::isFloat(elemType)) {
+    if (isa<FloatType>(elemType)) {
       val = values.getValues<FloatAttr>()[0];
-    } else if (type::isInt(elemType)) {
+    } else if (isa<IntegerType>(elemType)) {
       val = values.getValues<IntegerAttr>()[0];
     } else {
       llvm::errs() << "ArithConstantSplatOpConversion get unsupported type: "
                    << value.getType() << "\n";
       return failure();
     }
-    auto constOp = rewriter.create<LLVM::ConstantOp>(loc, elemType, val);
     auto typeConverter = getTypeConverter();
+    auto constOp = rewriter.create<LLVM::ConstantOp>(
+        loc, typeConverter->convertType(elemType), val);
     auto llStruct = SplatOpConversion::convertSplatLikeOp(
         elemType, op.getType(), constOp, typeConverter, rewriter, loc);
     rewriter.replaceOp(op, llStruct);

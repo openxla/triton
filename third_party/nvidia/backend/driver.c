@@ -259,6 +259,9 @@ static PyObject *setPrintfFifoSize(PyObject *self, PyObject *args) {
 // Simple helper to experiment creating TMA descriptors on the host.
 // This is a useful to test TMA operations independently.
 static PyObject *fill1DTMADescriptor(PyObject *self, PyObject *args) {
+#if CUDA_VERSION < 12000
+  return NULL;
+#else
   unsigned long long global_address;
   uint64_t dim;
   uint32_t tensorDim;
@@ -296,11 +299,15 @@ static PyObject *fill1DTMADescriptor(PyObject *self, PyObject *args) {
       CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
   assert(result == CUDA_SUCCESS);
   return Py_None;
+#endif
 }
 
 // Simple helper to experiment creating TMA descriptors on the host.
 // This is a useful to test TMA operations independently.
 static PyObject *fill2DTMADescriptor(PyObject *self, PyObject *args) {
+#if CUDA_VERSION < 12000
+  return NULL;
+#else
   unsigned long long global_address;
   uint64_t dims[2];
   uint32_t tensorDims[2];
@@ -357,6 +364,7 @@ static PyObject *fill2DTMADescriptor(PyObject *self, PyObject *args) {
       CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE);
   assert(result == CUDA_SUCCESS);
   return Py_None;
+#endif
 }
 
 static PyMethodDef ModuleMethods[] = {

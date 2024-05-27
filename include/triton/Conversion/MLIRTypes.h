@@ -26,15 +26,6 @@ inline Type f32Ty(MLIRContext *ctx) { return FloatType::getF32(ctx); }
 inline Type f64Ty(MLIRContext *ctx) { return FloatType::getF64(ctx); }
 inline Type bf16Ty(MLIRContext *ctx) { return FloatType::getBF16(ctx); }
 
-inline bool isFloat(Type type) {
-  return type.isF32() || type.isF64() || type.isF16() || type.isF128() ||
-         type.isBF16() || type.isFloat8E4M3B11FNUZ() || type.isFloat8E4M3FN() ||
-         type.isFloat8E4M3FNUZ() || type.isFloat8E5M2() ||
-         type.isFloat8E5M2FNUZ();
-}
-
-inline bool isInt(Type type) { return type.isIntOrFloat() && !isFloat(type); }
-
 } // namespace type
 } // namespace triton
 } // namespace mlir
