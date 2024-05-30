@@ -1,10 +1,13 @@
-load("//third_party/bazel_rules/rules_python/python:py_extension.bzl", "py_extension")
+load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(
     default_applicable_licenses = ["//:license"],
+    visibility = [
+        "//third_party/py/triton:__subpackages__",
+    ],
 )
 
-py_extension(
+pybind_extension(
     name = "cuda_utils",
     srcs = ["driver.c"],
     visibility = [
@@ -17,12 +20,24 @@ py_extension(
     ],
 )
 
+pybind_extension(
+    name = "launcher",
+    srcs = [
+        "launcher.cc",
+    ],
+    tags = [
+        "config-cuda-only",
+        "requires-gpu-sm80",
+    ],
+    deps = [
+        "@local_config_cuda//cuda:cuda_headers",
+        "@local_config_cuda//cuda:cuda_runtime",
+    ],
+)
+
 filegroup(
     name = "files",
     srcs = glob(
         include = ["*.py"],
     ),
-    visibility = [
-        "//third_party/py/triton:__subpackages__",
-    ],
 )

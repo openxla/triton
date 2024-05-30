@@ -832,6 +832,8 @@ cc_library(
         ":triton_nvidia_gpu_transforms_inc_gen",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@triton//test:TritonTestAnalysis",
+        "@triton//third_party/amd:TritonAMDGPUToLLVM",
+        "@triton//third_party/amd:TritonAMDGPUTransforms",
         "@triton//third_party/nvidia:NVGPUDialect",
         "@triton//third_party/nvidia:NVGPUToLLVM",
         "@triton//third_party/nvidia:TritonNVIDIAGPUToLLVM",

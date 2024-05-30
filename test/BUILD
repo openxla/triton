@@ -17,9 +17,9 @@
 #     ],
 #     driver = "@llvm-project//mlir:run_lit.sh",
 #     exclude = [
+#         "Conversion/amd/dedup-by-constancy.mlir",  # AMD-specific, broken
 #         "TritonGPU/combine.mlir",  # TODO(b/338346821): needs cse or something.
 #         "TritonGPU/dot-operands.mlir",  # TODO(b/283035396): broken by cl536931041.patch
-#         "TritonGPU/optimize_epilogue.mlir",  # AMD-specific
 #     ],
 #     test_file_exts = [
 #         "mlir",

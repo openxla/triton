@@ -224,6 +224,20 @@ public:
     auto newType = MemDescType::get(argType.getShape(),
                                     argType.getElementType(), newLayout);
     rewriter.setInsertionPointAfterValue(arg);
+
+    // LocalAllocOp lowering doesn't support going from DotOperandEncoding
+    // to SharedEncoding.
+    if (auto dotOpEnc = mlir::dyn_cast<DotOperandEncodingAttr>(
+            argType.getEncoding())) {
+      // Create a layout conversion from DotOperandEncoding to BlockedEncoding
+      // then pass it to the LocalAllocOp.
+      auto newArgType = RankedTensorType::get(
+          argType.getShape(), argType.getElementType(), dotOpEnc.getParent());
+      auto dotOperandToBlockedCvt =
+          rewriter.create<ConvertLayoutOp>(arg.getLoc(), newArgType, arg);
+      return rewriter.create<LocalAllocOp>(arg.getLoc(), newType,
+                                                dotOperandToBlockedCvt);
+    }
     return rewriter.create<LocalAllocOp>(arg.getLoc(), newType, arg);
   }
 
