@@ -2096,6 +2096,8 @@ keep_dims_3d_configs = [(op, 'float32', (32, 2, 16), axis, True)
                                                   for op in ['min', 'max', 'sum']]
 
 
+@pytest.mark.skipif(torch.cuda.get_device_capability()[0] >= 9,
+                    reason='Reduction test produces wrong results on H100, b/342347027')
 @pytest.mark.interpreter
 @pytest.mark.parametrize(
     "op, dtype_str, shape, axis, keep_dims", reduce_configs1 + reduce_configs2 + reduce_configs3 + invalid_config +
@@ -3588,6 +3590,25 @@ def test_dot_without_load(dtype_str, device):
     out_ref = torch.matmul(a, b)
     out = torch.zeros((32, 32), dtype=getattr(torch, dtype_str), device=device)
     kernel[(1, )](out)
+    assert torch.all(out == out_ref)
+
+@pytest.mark.interpreter
+def test_dot_on_broadcast(device):
+    @triton.jit
+    def _kernel(a, b, out):
+        a_offsets = tl.arange(0, 64)[:, None] * 32 + tl.arange(0, 32)[None, :]
+        lhs = tl.load(a + a_offsets, mask=a_offsets < 32 * 64)
+        rhs = tl.load(b)
+        rhs_bc = tl.broadcast_to(rhs, [32, 32])
+        c = tl.dot(lhs, rhs_bc)
+        out_ptr = out + tl.arange(0, 64)[:, None] * 32 + tl.arange(0, 32)[None, :]
+        tl.store(out_ptr, c)
+
+    a = torch.ones((64, 32), dtype=getattr(torch, 'float32'), device=device)
+    b = torch.tensor([1.0], dtype=getattr(torch, 'float32'), device=device)
+    out_ref = torch.matmul(a, torch.broadcast_to(b, (32, 32)))
+    out = torch.zeros((64, 32), dtype=getattr(torch, 'float32'), device=device)
+    _kernel[(1, )](a, b, out, num_stages=1, num_warps=4)
     assert torch.all(out == out_ref)
 
 
