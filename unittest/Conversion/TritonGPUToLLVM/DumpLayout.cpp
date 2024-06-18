@@ -23,7 +23,7 @@
 
 #include "DumpLayout.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "nvidia/include/Dialect/NVGPU/IR/Dialect.h"
+#include "Dialect/NVGPU/IR/Dialect.h"
 #ifdef AMD_TARGET
 #include "amd/lib/TritonAMDGPUToLLVM/TargetInfo.h"
 #include "amd/lib/TritonAMDGPUToLLVM/Utility.h"

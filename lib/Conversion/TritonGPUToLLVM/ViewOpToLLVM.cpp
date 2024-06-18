@@ -83,8 +83,9 @@ struct ArithConstantSplatOpConversion
                    << value.getType() << "\n";
       return failure();
     }
-    auto constOp = rewriter.create<LLVM::ConstantOp>(loc, elemType, val);
     auto typeConverter = getTypeConverter();
+    auto constOp = rewriter.create<LLVM::ConstantOp>(
+        loc, typeConverter->convertType(elemType), val);
     auto llStruct = SplatOpConversion::convertSplatLikeOp(
         elemType, op.getType(), constOp, typeConverter, rewriter, loc);
     rewriter.replaceOp(op, llStruct);

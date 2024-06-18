@@ -40,7 +40,8 @@ SmallVector<Value> reorderValues(const SmallVector<Value> &values, Type inType,
   auto ouEltTy = ouTensorTy.getElementType();
   if (inBitWidth == ouBitWidth)
     return values;
-  if (inBitWidth == 16 && ouBitWidth == 32) {
+  if ((inBitWidth == 16 && ouBitWidth == 32) ||
+      (inBitWidth == 32 && ouBitWidth == 16)) {
     SmallVector<Value> ret;
     for (unsigned i = 0; i < values.size(); i += 8) {
       ret.push_back(values[i]);
