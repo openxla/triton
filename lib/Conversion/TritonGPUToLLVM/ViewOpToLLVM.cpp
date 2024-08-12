@@ -87,8 +87,9 @@ struct ArithConstantSplatOpConversion
     // LLVM IR.
     if (type::isFloat8(elemType))
       elemType = rewriter.getIntegerType(8);
-    auto constOp = rewriter.create<LLVM::ConstantOp>(loc, elemType, val);
     auto typeConverter = getTypeConverter();
+    auto constOp = rewriter.create<LLVM::ConstantOp>(
+        loc, typeConverter->convertType(elemType), val);
     auto llStruct = SplatOpConversion::convertSplatLikeOp(
         elemType, op.getType(), constOp, typeConverter, rewriter, loc);
     rewriter.replaceOp(op, llStruct);
