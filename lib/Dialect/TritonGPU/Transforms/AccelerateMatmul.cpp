@@ -156,8 +156,8 @@ static Value getSharedMemoryMMAOperand(Value v, mlir::PatternRewriter &rewriter,
 
   // LocalAllocOp lowering doesn't support going from DotOperandEncoding
   // to SharedEncoding.
-  if (auto dotOpEnc = mlir::dyn_cast<DotOperandEncodingAttr>(
-          argType.getEncoding())) {
+  if (auto dotOpEnc =
+          mlir::dyn_cast<DotOperandEncodingAttr>(argType.getEncoding())) {
     // Create a layout conversion from DotOperandEncoding to BlockedEncoding
     // then pass it to the LocalAllocOp.
     auto newArgType = RankedTensorType::get(
@@ -165,7 +165,7 @@ static Value getSharedMemoryMMAOperand(Value v, mlir::PatternRewriter &rewriter,
     auto dotOperandToBlockedCvt =
         rewriter.create<ConvertLayoutOp>(arg.getLoc(), newArgType, arg);
     return rewriter.create<LocalAllocOp>(arg.getLoc(), newType,
-                                              dotOperandToBlockedCvt);
+                                         dotOperandToBlockedCvt);
   }
 
   return rewriter.create<LocalAllocOp>(arg.getLoc(), newType, arg);
@@ -381,7 +381,7 @@ static void decomposeMixedModeDotOp(ModuleOp mod, int computeCapability) {
     NvidiaMmaEncodingAttr mmaLayout =
         dyn_cast<NvidiaMmaEncodingAttr>(D.getType().getEncoding());
     if (mmaLayout) {
-      bool isNativeFP8 = AElType.isFloat8E5M2() || AElType.isFloat8E4M3FNUZ();
+      bool isNativeFP8 = AElType.isFloat8E5M2() || AElType.isFloat8E4M3FN();
       // promote operands for sm < 89 since fp8 mma is not natively supported
       // promote operands for sm >= 90 when mma is not v3
       if (!isNativeFP8 ||

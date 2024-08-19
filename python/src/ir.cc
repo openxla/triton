@@ -748,7 +748,7 @@ void init_triton_ir(py::module &&m) {
            // TODO: fp8e4nv is using Float8E4M3FNUZType, which
            // does not seem right. It should use FloatE4M3FNType
            [](TritonOpBuilder &self) -> Type {
-             return self.getBuilder().getType<Float8E4M3FNUZType>();
+             return self.getBuilder().getType<Float8E4M3FNType>();
            })
       .def("get_fp8e4b8_ty",
            [](TritonOpBuilder &self) -> Type {
