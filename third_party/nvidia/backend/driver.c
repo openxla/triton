@@ -154,6 +154,7 @@ static PyObject *loadBinary(PyObject *self, PyObject *args) {
 typedef CUresult (*cuOccupancyMaxActiveClusters_t)(
     int *numClusters, CUfunction func, const CUlaunchConfig *config);
 
+#if CUDA_VERSION >= 12000
 typedef CUresult (*cuTensorMapEncodeTiled_t)(
     CUtensorMap *tensorMap, CUtensorMapDataType tensorDataType,
     cuuint32_t tensorRank, void *globalAddress, const cuuint64_t *globalDim,
@@ -161,6 +162,7 @@ typedef CUresult (*cuTensorMapEncodeTiled_t)(
     const cuuint32_t *elementStrides, CUtensorMapInterleave interleave,
     CUtensorMapSwizzle swizzle, CUtensorMapL2promotion l2Promotion,
     CUtensorMapFloatOOBfill oobFill);
+#endif
 
 #define defineGetFunctionHandle(name, symbolName)                              \
   static symbolName##_t name() {                                               \
@@ -187,8 +189,10 @@ typedef CUresult (*cuTensorMapEncodeTiled_t)(
 defineGetFunctionHandle(getCuOccupancyMaxActiveClustersHandle,
                         cuOccupancyMaxActiveClusters);
 
+#if CUDA_VERSION >= 12000
 defineGetFunctionHandle(getCuTensorMapEncodeTiledHandle,
                         cuTensorMapEncodeTiled);
+#endif
 
 static PyObject *occupancyMaxActiveClusters(PyObject *self, PyObject *args) {
   int clusterDimX = -1, clusterDimY = -1, clusterDimZ = -1,
@@ -280,6 +284,9 @@ static PyObject *setPrintfFifoSize(PyObject *self, PyObject *args) {
 // Simple helper to experiment creating TMA descriptors on the host.
 // This is a useful to test TMA operations independently.
 static PyObject *fill1DTMADescriptor(PyObject *self, PyObject *args) {
+#if CUDA_VERSION < 12000
+  return NULL;
+#else
   unsigned long long global_address;
   uint64_t dim;
   uint32_t tensorDim;
@@ -318,11 +325,15 @@ static PyObject *fill1DTMADescriptor(PyObject *self, PyObject *args) {
       CU_TENSOR_MAP_SWIZZLE_NONE, CU_TENSOR_MAP_L2_PROMOTION_NONE,
       CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
   return Py_None;
+#endif
 }
 
 // Simple helper to experiment creating TMA descriptors on the host.
 // This is a useful to test TMA operations independently.
 static PyObject *fill2DTMADescriptor(PyObject *self, PyObject *args) {
+#if CUDA_VERSION < 12000
+  return NULL;
+#else
   unsigned long long global_address;
   uint64_t dims[2];
   uint32_t tensorDims[2];
@@ -380,6 +391,7 @@ static PyObject *fill2DTMADescriptor(PyObject *self, PyObject *args) {
       swizzle, CU_TENSOR_MAP_L2_PROMOTION_L2_128B,
       CU_TENSOR_MAP_FLOAT_OOB_FILL_NONE));
   return Py_None;
+#endif
 }
 
 static PyMethodDef ModuleMethods[] = {
