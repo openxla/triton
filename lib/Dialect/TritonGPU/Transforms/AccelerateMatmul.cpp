@@ -156,8 +156,8 @@ static Value getSharedMemoryMMAOperand(Value v, mlir::PatternRewriter &rewriter,
 
   // LocalAllocOp lowering doesn't support going from DotOperandEncoding
   // to SharedEncoding.
-  if (auto dotOpEnc =
-          mlir::dyn_cast<DotOperandEncodingAttr>(argType.getEncoding())) {
+  if (auto dotOpEnc = mlir::dyn_cast<DotOperandEncodingAttr>(
+          argType.getEncoding())) {
     // Create a layout conversion from DotOperandEncoding to BlockedEncoding
     // then pass it to the LocalAllocOp.
     auto newArgType = RankedTensorType::get(
@@ -165,7 +165,7 @@ static Value getSharedMemoryMMAOperand(Value v, mlir::PatternRewriter &rewriter,
     auto dotOperandToBlockedCvt =
         rewriter.create<ConvertLayoutOp>(arg.getLoc(), newArgType, arg);
     return rewriter.create<LocalAllocOp>(arg.getLoc(), newType,
-                                         dotOperandToBlockedCvt);
+                                              dotOperandToBlockedCvt);
   }
 
   return rewriter.create<LocalAllocOp>(arg.getLoc(), newType, arg);
