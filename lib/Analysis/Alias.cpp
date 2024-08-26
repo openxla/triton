@@ -21,7 +21,7 @@ AliasInfo AliasInfo::join(const AliasInfo &lhs, const AliasInfo &rhs) {
   return ret;
 }
 
-void SharedMemoryAliasAnalysis::visitOperation(
+LogicalResult SharedMemoryAliasAnalysis::visitOperation(
     Operation *op, ArrayRef<const dataflow::Lattice<AliasInfo> *> operands,
     ArrayRef<dataflow::Lattice<AliasInfo> *> results) {
   AliasInfo aliasInfo;
@@ -31,7 +31,7 @@ void SharedMemoryAliasAnalysis::visitOperation(
   if (auto memdescTy = dyn_cast<triton::MemDescType>(result.getType())) {
     if (!isa_and_nonnull<triton::gpu::SharedMemorySpaceAttr>(
             memdescTy.getMemorySpace()))
-      return;
+      return mlir::success();
   }
 
   // Only LocalAllocOp creates a new buffer.
@@ -49,11 +49,13 @@ void SharedMemoryAliasAnalysis::visitOperation(
   }
 
   if (pessimistic) {
-    return setAllToEntryStates(results);
+    setAllToEntryStates(results);
+    return mlir::success();
   }
   // Join all lattice elements
   for (auto *result : results)
     propagateIfChanged(result, result->join(aliasInfo));
+  return mlir::success();
 }
 
 AliasResult SharedMemoryAliasAnalysis::alias(Value lhs, Value rhs) {

@@ -153,6 +153,21 @@ static Value getSharedMemoryMMAOperand(Value v, mlir::PatternRewriter &rewriter,
   auto newType = MemDescType::get(argType.getShape(), argType.getElementType(),
                                   newLayout, SharedMemorySpace);
   rewriter.setInsertionPointAfterValue(arg);
+
+  // LocalAllocOp lowering doesn't support going from DotOperandEncoding
+  // to SharedEncoding.
+  if (auto dotOpEnc = mlir::dyn_cast<DotOperandEncodingAttr>(
+          argType.getEncoding())) {
+    // Create a layout conversion from DotOperandEncoding to BlockedEncoding
+    // then pass it to the LocalAllocOp.
+    auto newArgType = RankedTensorType::get(
+        argType.getShape(), argType.getElementType(), dotOpEnc.getParent());
+    auto dotOperandToBlockedCvt =
+        rewriter.create<ConvertLayoutOp>(arg.getLoc(), newArgType, arg);
+    return rewriter.create<LocalAllocOp>(arg.getLoc(), newType,
+                                              dotOperandToBlockedCvt);
+  }
+
   return rewriter.create<LocalAllocOp>(arg.getLoc(), newType, arg);
 }
 
@@ -162,6 +177,15 @@ class BlockedToMMA : public mlir::OpRewritePattern<DotOp> {
   mutable llvm::DenseMap<Operation *, unsigned> dotOpInstNs;
 
   static bool bwdFilter(Operation *op) {
+    // Dot operand layout assignment to Predicates are not currently supported
+    // during lowering from TritonGPU to LLVM in Triton for MMA cases. This
+    // condition limits visibility of the original bit-width so that predicate
+    // are not considered, hence, kwidth can never be = 32.
+    if (isa<arith::UIToFPOp>(op)) {
+      Type srcType = getElementTypeOrSelf(op->getOperand(0));
+      if (srcType.isInteger(1))
+        return false;
+    }
     return op->getNumOperands() == 1 &&
            (isa<FpToFpOp, BitcastOp, ConvertLayoutOp>(op) ||
             isPureUnaryInlineAsm(op) ||
@@ -357,7 +381,7 @@ static void decomposeMixedModeDotOp(ModuleOp mod, int computeCapability) {
     NvidiaMmaEncodingAttr mmaLayout =
         dyn_cast<NvidiaMmaEncodingAttr>(D.getType().getEncoding());
     if (mmaLayout) {
-      bool isNativeFP8 = AElType.isFloat8E5M2() || AElType.isFloat8E4M3FNUZ();
+      bool isNativeFP8 = AElType.isFloat8E5M2() || AElType.isFloat8E4M3FN();
       // promote operands for sm < 89 since fp8 mma is not natively supported
       // promote operands for sm >= 90 when mma is not v3
       if (!isNativeFP8 ||
