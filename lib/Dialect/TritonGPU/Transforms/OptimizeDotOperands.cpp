@@ -396,8 +396,8 @@ struct MMAV3HoistLayoutConversion
     BackwardSliceOptions opt;
     opt.omitBlockArguments = true;
     opt.filter = [&](Operation *op) {
-      return (op->getParentRegion() == alloc->getParentRegion()) && !isa<LoadOp, LocalLoadOp, LocalAllocOp>(op)
-        && (op->getNumOperands() != 0);
+      return (op->getParentRegion() == alloc->getParentRegion()) && !isa<LoadOp, LocalLoadOp>(op)
+        && (op->getNumOperands() != 0);  // Ensures all ops in slice have operands
     };
 
     getBackwardSlice(alloc.getOperation(), &slice, opt);
@@ -411,8 +411,22 @@ struct MMAV3HoistLayoutConversion
       if (!canHoistDotOpEncV3(currOp))
         return failure();
 
-      if (llvm::any_of(currOp->getOperands(),
-            [&](auto operand) { return !slice.contains(operand.getDefiningOp()); })) {
+      // We previously ensured that all ops in slice have at least one operand
+      bool isFrontier = false;
+      for (auto operand : currOp->getOperands()) {
+        auto op = operand.getDefiningOp();
+        if (!slice.contains(op)) {
+          // TODO that this is overly restrictive. Can add support for ConstantOp and LocalLoad
+          if (!isa<LoadOp>(op))
+            return failure();
+
+          isFrontier = true;
+        }
+      }
+
+      if (isFrontier) {
+        if (!isa<LoadOp>(currOp->getOperand(0).getDefiningOp()))
+          return failure();
 
         auto res = currOp->getResult(0);
         if (!isBlockedRankedTensor(res))
@@ -432,6 +446,9 @@ struct MMAV3HoistLayoutConversion
     auto dotOperandEnc = DotOperandEncodingAttr::get(
         dotOp.getContext(), /*opIdx=*/0, dstEnc, /*kWidth=*/0);
 
+    // For each frontierOp:
+    //  load; frontierOp; ...; warp_group_dot
+    //  -> load; local_alloc; local_load; convert_layout; frontierOp; ...; warp_group_dot
     for (Operation *frontierOp : frontierOps) {
       auto frontierTy = dyn_cast<RankedTensorType>(frontierOp->getResult(0).getType());
 
@@ -439,10 +456,19 @@ struct MMAV3HoistLayoutConversion
       for (auto operand : frontierOp->getOperands()) {
         // We checked earlier that all operands are ranked tensors.
         auto operandTy = cast<RankedTensorType>(operand.getType());
+        auto operandEltTy = operandTy.getElementType();
+
+        auto oldAllocTy = alloc.getType();
+        auto newAllocTy = MemDescType::get(operandTy.getShape(), operandEltTy,
+                                        oldAllocTy.getEncoding(), oldAllocTy.getMemorySpace());
+        auto localAlloc = rewriter.create<LocalAllocOp>(alloc.getLoc(), newAllocTy, operand);
+        auto localLoad = rewriter.create<LocalLoadOp>(alloc.getLoc(), operandTy, localAlloc);
+
         Type cvtTy = RankedTensorType::get(
             operandTy.getShape(), operandTy.getElementType(), dotOperandEnc);
-        newOperands.push_back(
-            rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, operand));
+        auto cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, localLoad);
+
+        newOperands.push_back(cvt);
       }
 
       auto newFrontier = rewriter.clone(*frontierOp);
@@ -450,6 +476,7 @@ struct MMAV3HoistLayoutConversion
         newFrontier->setOperand(i, newOperands[i]);
       newFrontier->getResult(0).setType(RankedTensorType::get(
           frontierTy.getShape(), frontierTy.getElementType(), dotOperandEnc));
+
       rewriter.replaceOp(frontierOp, newFrontier);
     }
 
