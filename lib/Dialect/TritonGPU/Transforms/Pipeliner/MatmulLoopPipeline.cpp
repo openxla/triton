@@ -385,6 +385,14 @@ static bool loadIsMMAv3(Operation *loadOp) {
   if (!sharedEnc.getHasLeadingOffset())
     return false;
 
+  // In case LHS is in registers, don't pipeline for now
+  auto op = *alloc->getUsers().begin();
+  if (auto localLoad = dyn_cast<ttg::LocalLoadOp>(op)) {
+    auto resTy = cast<RankedTensorType>(localLoad->getResultTypes()[0]);
+    if (!resTy || isa<ttg::DotOperandEncodingAttr>(resTy.getEncoding()))
+      return false;
+  }
+
   // MMA V3 case.
   auto newOrder = sharedEnc.getOrder();
   auto ty = cast<RankedTensorType>(loadOp->getResultTypes()[0]);
