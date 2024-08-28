@@ -5263,6 +5263,84 @@ def test_dot_max_num_imprecise_acc(M, N, K, BLOCK_M, BLOCK_N, BLOCK_K, in_type_s
         assert h.asm["ptx"].count("add.f32") == (BLOCK_M * BLOCK_N) // (32 * num_warps) * (BLOCK_K // low_precision_acc)
 
 
+# -----------------------------
+# test i8x*fp32 fp32*xi8 dot
+# -----------------------------
+
+
+@triton.jit
+def mixed_matmul_kernel(lhs_ptr,  # (M, K)
+                        rhs_ptr,  # (K, N)
+                        out_ptr,  # (M, N)
+                        # shape information (strides)
+                        M, N, K,
+                        # block information
+                        block_m: tl.constexpr, block_n: tl.constexpr, block_k: tl.constexpr, lhs_mixed: tl.constexpr,
+                        dtype: tl.constexpr):
+
+    start_m = tl.program_id(0)  # start (axis m)
+    start_n = tl.program_id(1)  # start (axis n)
+
+    acc = tl.zeros([block_m, block_n], dtype=tl.float32)
+
+    for start_k in range(0, K, block_k):
+        lhs_tile = (start_m * block_m + tl.arange(0, block_m))[:, None] * K + (start_k + tl.arange(0, block_k))[None, :]
+
+        rhs_tile = (start_k + tl.arange(0, block_k))[:, None] * N + (start_n * block_n + tl.arange(0, block_n))[None, :]
+
+        lhs_mask = ((start_m * block_m + tl.arange(0, block_m)) < M)[:, None] * (
+            (start_k + tl.arange(0, block_k)) < K)[None, :]
+        rhs_mask = ((start_n * block_n + tl.arange(0, block_n)) < N)[None, :] * (
+            (start_k + tl.arange(0, block_k)) < K)[:, None]
+
+        lhs = tl.load(lhs_ptr + lhs_tile, mask=lhs_mask, other=0.0)
+        rhs = tl.load(rhs_ptr + rhs_tile, mask=rhs_mask, other=0.0)
+
+        if lhs_mixed:
+            lhs = lhs.to(dtype)
+        else:
+            rhs = rhs.to(dtype)
+        acc += tl.dot(lhs, rhs)
+
+    out_tile = ((start_m * block_m + tl.arange(0, block_m))[:, None] * N + start_n * block_n +
+                tl.arange(0, block_n)[None, :])
+
+    mask = ((start_m * block_m + tl.arange(0, block_m)) < M)[:, None] * (
+        (start_n * block_n + tl.arange(0, block_n)) < N)[None, :]
+
+    tl.store(out_ptr + out_tile, acc, mask=mask)
+
+
+@pytest.mark.interpreter
+@pytest.mark.parametrize("M, N, K", [(128, 64, 32)])
+@pytest.mark.parametrize("BLOCK_M, BLOCK_N, BLOCK_K", [(16, 16, 16)])
+@pytest.mark.parametrize("is_fp32", [True, False])
+@pytest.mark.parametrize("lhs_mixed", [True, False])
+def test_mixed_dot(M, N, K, BLOCK_M, BLOCK_N, BLOCK_K, is_fp32, lhs_mixed, device):
+    if is_cuda():
+        cc = torch.cuda.get_device_capability()
+        if cc[0] < 8:
+            pytest.skip("Need at least sm80")
+
+    torch_dtype = torch.float32 if is_fp32 else torch.float16
+    tl_dtype = tl.float32 if is_fp32 else tl.float16
+
+    if lhs_mixed:
+        lhs = torch.randint(0, 127, (M, K), dtype=torch.int8, device=device)
+        rhs = torch.randn((K, N), dtype=torch.float16, device=device).to(dtype=torch_dtype)
+    else:
+        lhs = torch.randn((M, K), dtype=torch.float16, device=device).to(dtype=torch_dtype)
+        rhs = torch.randint(0, 127, (K, N), dtype=torch.int8, device=device)
+    out = torch.empty((M, N), dtype=torch.float32, device=device)
+
+    mixed_matmul_kernel[(triton.cdiv(M, BLOCK_M), triton.cdiv(N,
+                                                              BLOCK_N))](lhs, rhs, out, M=M, N=N, K=K, block_m=BLOCK_M,
+                                                                         block_n=BLOCK_N, block_k=BLOCK_K,
+                                                                         lhs_mixed=lhs_mixed, dtype=tl_dtype)
+    ref = torch.mm(lhs.to(dtype=torch.float32), rhs.to(dtype=torch.float32))
+    torch.testing.assert_close(ref, out, rtol=1e-3, atol=1e-3)
+
+
 # -----------------------
 # test enable_fp_fusion
 # -----------------------

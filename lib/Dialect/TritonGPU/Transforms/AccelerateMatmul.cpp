@@ -310,8 +310,16 @@ public:
           dotOp.getMaxNumImpreciseAcc(), false);
     } else {
       // convert operands
-      int minBitwidth =
-          std::min(computeOrigBitWidth(a), computeOrigBitWidth(b));
+      int bitwidthA = computeOrigBitWidth(a);
+      int bitwidthB = computeOrigBitWidth(b);
+      int minBitwidth = std::min(bitwidthA, bitwidthB);
+      int maxBitwidth = std::max(bitwidthA, bitwidthB);
+      if (minBitwidth == 8 && maxBitwidth == 32) {
+        // workaround for i8xf32 matmul, issue #2853
+        // f32 x kWidth=4 is not supported in triton nvidiagpu to nvvm lowering
+        // use kWidth = 2
+        minBitwidth = 16;
+      }
       Type minType = rewriter.getIntegerType(minBitwidth);
       // convert A operand
       auto newAEncoding = DotOperandEncodingAttr::get(
