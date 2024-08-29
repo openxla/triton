@@ -459,6 +459,8 @@ struct MMAV3HoistLayoutConversion
         auto operandEltTy = operandTy.getElementType();
 
         auto oldAllocTy = alloc.getType();
+        // TODO(ggengnv) previous encoding (oldAllocTy.getEncoding()) was for shared operand.
+        // Is it still appropriate for loading into registers?
         auto newAllocTy = MemDescType::get(operandTy.getShape(), operandEltTy,
                                         oldAllocTy.getEncoding(), oldAllocTy.getMemorySpace());
         auto localAlloc = rewriter.create<LocalAllocOp>(alloc.getLoc(), newAllocTy, operand);

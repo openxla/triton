@@ -87,8 +87,12 @@ SmallVector<Value> unpackI32(const SmallVector<Value> &inValues, Type srcTy,
   if (!tensorTy)
     return inValues;
   auto encoding = dyn_cast<DotOperandEncodingAttr>(tensorTy.getEncoding());
-  if (!(encoding && isa<NvidiaMmaEncodingAttr>(encoding.getParent())))
+  if (!encoding)
     return inValues;
+  auto parentEnc = dyn_cast<NvidiaMmaEncodingAttr>(encoding.getParent());
+  if (!parentEnc || parentEnc.isHopper())
+    return inValues;
+
   SmallVector<Value> outValues;
   for (auto v : inValues) {
     // cast i32 to appropriate eltType vector and extract elements
@@ -109,8 +113,12 @@ SmallVector<Value> packI32(const SmallVector<Value> &inValues, Type srcTy,
   if (!tensorTy)
     return inValues;
   auto encoding = dyn_cast<DotOperandEncodingAttr>(tensorTy.getEncoding());
-  if (!(encoding && isa<NvidiaMmaEncodingAttr>(encoding.getParent())))
+  if (!encoding)
     return inValues;
+  auto parentEnc = dyn_cast<NvidiaMmaEncodingAttr>(encoding.getParent());
+  if (!parentEnc || parentEnc.isHopper())
+    return inValues;
+
   SmallVector<Value> outValues;
   auto eltType = typeConverter->convertType(tensorTy.getElementType());
   int vecWidth = 32 / eltType.getIntOrFloatBitWidth();
