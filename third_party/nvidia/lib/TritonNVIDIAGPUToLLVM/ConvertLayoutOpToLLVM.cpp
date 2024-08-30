@@ -42,26 +42,6 @@ Value convertLayout(int opIdx, ConversionPatternRewriter &rewriter,
                     const LLVMTypeConverter *typeConverter, Value thread);
 } // namespace SharedToDotOperandMMAv2
 
-namespace SharedToDotOperandMMAv3 {
-Value convertLayout(ConversionPatternRewriter &rewriter,
-                    Location loc, Value tensor,
-                    DotOperandEncodingAttr bEncoding,
-                    const SharedMemoryObject &smemObj,
-                    const LLVMTypeConverter *typeConverter, Value thread) {
-  SmallVector<Value> elems;
-  // TODO(ggengnv) fix
-  for (int i = 0; i < 16; i++) {
-    elems.push_back(int_val(8, 0));
-  }
-  Type elemTy = elems[0].getType();
-  MLIRContext *ctx = elemTy.getContext();
-  Type structTy = LLVM::LLVMStructType::getLiteral(
-      ctx, SmallVector<Type>(elems.size(), elemTy));
-  auto result = packLLElements(loc, typeConverter, elems, rewriter, structTy);
-  return result;
-}
-} // namespace SharedToDotOperandMMAv3
-
 namespace {
 
 using namespace mlir;
@@ -116,8 +96,9 @@ private:
 
     if (mmaLayout.isHopper()) { // tensor core v3
       assert(dotOperandLayout.getOpIdx() == 0);
-      res = SharedToDotOperandMMAv3::convertLayout(rewriter, loc, src,
-          dotOperandLayout, smemObj, typeConverter, getThreadId(rewriter, loc));
+      res = SharedToDotOperandMMAv2::convertLayout(
+          0, rewriter, loc, src, dotOperandLayout,
+          smemObj, typeConverter, getThreadId(rewriter, loc));
     } else if (mmaLayout.isAmpere()) { // tensor core v2
       res = SharedToDotOperandMMAv2::convertLayout(
           dotOperandLayout.getOpIdx(), rewriter, loc, src, dotOperandLayout,
