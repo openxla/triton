@@ -348,7 +348,7 @@ struct MMAV3UseRegOperand
   }
 };
 
-// TODO(ggengnv) document
+// TODO(ggengnv) more tests (multiple elt-wise ops) and document
 struct MMAV3HoistLayoutConversion
     : public OpRewritePattern<triton::nvidia_gpu::WarpGroupDotOp> {
   using OpRewritePattern::OpRewritePattern;

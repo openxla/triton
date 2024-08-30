@@ -49,8 +49,9 @@ Value convertLayout(ConversionPatternRewriter &rewriter,
                     const SharedMemoryObject &smemObj,
                     const LLVMTypeConverter *typeConverter, Value thread) {
   SmallVector<Value> elems;
-  for (int i = 0; i < 4; i++) {
-    elems.push_back(i32_val(0));
+  // TODO(ggengnv) fix
+  for (int i = 0; i < 16; i++) {
+    elems.push_back(int_val(8, 0));
   }
   Type elemTy = elems[0].getType();
   MLIRContext *ctx = elemTy.getContext();

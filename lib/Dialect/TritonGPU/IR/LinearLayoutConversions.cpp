@@ -416,8 +416,9 @@ LinearLayout sharedToLinearLayoutLeadingOffset(ArrayRef<int64_t> shape,
   int colDim = shared.getOrder()[0];
   int rowDim = shared.getOrder()[1];
 
-  int tileRows = 8;
-  int tileCols = 8 * tileWidthBytes / elemBitWidth;
+  // HACK reconstructing this value from vec;
+  int vec = shared.getVec();
+  int finalBitWidth = 128 / vec;
 
   if (shape[colDim] < tileCols || shape[rowDim] < tileRows) {
     llvm::errs() << "Illegal shared layout; expected shape to be at least ["
