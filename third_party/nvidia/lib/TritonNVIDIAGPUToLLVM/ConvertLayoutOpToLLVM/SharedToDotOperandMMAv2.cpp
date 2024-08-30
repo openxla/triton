@@ -504,10 +504,27 @@ Type getSharedMemTy(Type argType) {
     llvm::report_fatal_error("mma16816 data type not supported");
 }
 
+// TODO factor out duplicate code
+std::vector<Value> unpackI32(const std::vector<Value> &inValues, Type elTy,
+                             ConversionPatternRewriter &rewriter, Location loc,
+                             const LLVMTypeConverter *typeConverter) {
+  std::vector<Value> outValues;
+  for (auto v : inValues) {
+    // cast i32 to appropriate eltType vector and extract elements
+    auto eltType = typeConverter->convertType(elTy);
+    auto vecType = vec_ty(eltType, 32 / eltType.getIntOrFloatBitWidth());
+    auto vec = bitcast(v, vecType);
+    for (int i = 0; i < 32 / eltType.getIntOrFloatBitWidth(); i++) {
+      outValues.push_back(extract_element(vec, i32_val(i)));
+    }
+  }
+  return outValues;
+}
+
 Value composeValuesToDotOperandLayoutStruct(
     const ValueTable &vals, int batch, int n0, int n1,
     const LLVMTypeConverter *typeConverter, Location loc,
-    ConversionPatternRewriter &rewriter) {
+    ConversionPatternRewriter &rewriter, Type elTy, bool unpacki32) {
   std::vector<Value> elems;
   for (int b = 0; b < batch; ++b)
     for (int m = 0; m < n0; ++m)
@@ -518,6 +535,10 @@ Value composeValuesToDotOperandLayoutStruct(
         elems.push_back(vals.at({b, 2 * m + 1, 2 * k + 1}));
       }
   assert(!elems.empty());
+
+  if (unpacki32) {
+    elems = unpackI32(elems, elTy, rewriter, loc, typeConverter);
+  }
 
   Type elemTy = elems[0].getType();
   MLIRContext *ctx = elemTy.getContext();
@@ -616,7 +637,6 @@ Value loadArg(ConversionPatternRewriter &rewriter, Location loc,
       delinearize(rewriter, loc, warp, warpsPerCTA, order);
   Value warpB = urem(multiDimWarpId[0], i32_val(shapePerCTA[0]));
   int warpsPerTile;
-  auto rank = shapePerCTA.size();
   Value warpM = urem(multiDimWarpId[1], i32_val(shapePerCTA[1] / 16));
   Value warpN = urem(multiDimWarpId[2], i32_val(shapePerCTA[2] / 8));
   if (isA)
@@ -650,9 +670,11 @@ Value loadArg(ConversionPatternRewriter &rewriter, Location loc,
       for (int k = 0; k < numRepK; ++k)
         loadFn(b, 2 * m, 2 * k);
 
+  bool unpacki32 = mmaLayout.getVersionMajor() == 3;
   // Format the values to LLVM::Struct to passing to mma codegen.
   return composeValuesToDotOperandLayoutStruct(
-      vals, numRepBatch, numRepOuter, numRepK, typeConverter, loc, rewriter);
+      vals, numRepBatch, numRepOuter, numRepK, typeConverter, loc, rewriter,
+      descTy.getElementType(), unpacki32);
 }
 
 template <typename T>

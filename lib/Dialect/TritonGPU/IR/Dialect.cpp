@@ -1022,13 +1022,17 @@ LogicalResult DotOperandEncodingAttr::verify(
     return emitError() << "triton_gpu.dot_op parent paramenter cannot be null";
   }
   if (auto parentAttr = mlir::dyn_cast<NvidiaMmaEncodingAttr>(parent)) {
-    if (kWidth != 0 && !parentAttr.isAmpere())
+    if (kWidth != 0 && !(parentAttr.isAmpere() || parentAttr.isHopper()))
       return emitError() << "triton_gpu.dot_op kWidth parameter can only be "
-                            "non-zero for Ampere MMA parent";
-    if (kWidth == 0 && parentAttr.isAmpere())
+                            "non-zero for Ampere or Hopper MMA parent";
+    if (kWidth == 0 && (parentAttr.isAmpere() || parentAttr.isHopper()))
       return emitError()
              << "triton_gpu.dot_op kWidth parameter is mandatory for "
-                "Ampere MMA parent";
+                "Ampere or Hopper MMA parent";
+    if (opIdx != 0 && parentAttr.isHopper())
+      return emitError()
+             << "triton_gpu.dot_op opIdx parameter must be 0 for "
+                "Hopper MMA parent";
     return success();
   }
 
@@ -1957,6 +1961,7 @@ int NvidiaMmaEncodingAttr::getMMAv1Vec(int opIdx) const {
 SmallVector<int64_t> NvidiaMmaEncodingAttr::getMMAv2Rep(ArrayRef<int64_t> shape,
                                                         int bitwidth,
                                                         int opIdx) const {
+  assert(isAmpere() || isHopper());
   auto rank = shape.size();
   auto warpsPerCTA = getWarpsPerCTA();
   SmallVector<int> shapePerWarp = {1, 16, 8, 4 * 64 / bitwidth};
@@ -1964,7 +1969,6 @@ SmallVector<int64_t> NvidiaMmaEncodingAttr::getMMAv2Rep(ArrayRef<int64_t> shape,
       rank == 3
           ? std::max<int64_t>(1, shape[0] / (shapePerWarp[0] * warpsPerCTA[0]))
           : 1;
-  assert(isAmpere());
 
   if (opIdx == 0)
     return {numRepBatch,
@@ -1979,6 +1983,7 @@ SmallVector<int64_t> NvidiaMmaEncodingAttr::getMMAv2Rep(ArrayRef<int64_t> shape,
                                                     warpsPerCTA[rank - 1]))};
   }
 }
+
 unsigned NvidiaMmaEncodingAttr::getTotalElemsPerThreadForOperands(
     ArrayRef<int64_t> shape, Type eltTy, int kWidth, int opIdx) const {
   auto shapePerCTA = getShapePerCTA(*this, shape);
@@ -1986,7 +1991,8 @@ unsigned NvidiaMmaEncodingAttr::getTotalElemsPerThreadForOperands(
   int warpsPerCTAN = getWarpsPerCTA()[1];
   // H100
   if (isHopper()) {
-    return getTotalElemsPerThread(shape, eltTy);
+    assert(opIdx == 0);
+    return getElemsPerThreadOfOperand(opIdx, shape);
   }
   // A100
   if (isAmpere()) {

@@ -76,6 +76,24 @@ bool canHoistDotOpEncV3(Operation* op) {
   return true;
 }
 
+// Logic identical to BlockedToMMA::computeOrigBitWidth()
+// This might not be necessary after pipelining is implemented for Hopper LHS registers MMA
+int computeOrigBitWidth(const SetVector<Operation*>& slice, int finalBitWidth) {
+  int origBitWidth = finalBitWidth;
+  for (auto op : slice) {
+    if (Value arg = op->getOperand(0))
+      if (auto argTy = dyn_cast<RankedTensorType>(arg.getType())) {
+        auto argBitWidth = argTy.getElementType().getIntOrFloatBitWidth();
+        if (argBitWidth != origBitWidth) {
+          origBitWidth = std::min<int>(origBitWidth, argBitWidth);
+          break;
+        }
+      }
+  }
+  return origBitWidth;
+}
+
+
 // Given
 //   convert(trans(src)) #dot_operand ->
 //   convert(local_load(trans(alloc(src))))
@@ -368,6 +386,7 @@ struct MMAV3HoistLayoutConversion
 
     // Performs checks for early stop
     NvidiaMmaEncodingAttr dstEnc;
+    Type inputEltTy;
     {
       auto srcEnc = dyn_cast<BlockedEncodingAttr>(getEncoding(alloc.getSrc()));
       dstEnc =
@@ -387,6 +406,7 @@ struct MMAV3HoistLayoutConversion
       auto srcTy = dyn_cast<RankedTensorType>(src->getResult(0).getType());
       if (!srcTy)
         return failure();
+      inputEltTy = srcTy.getElementType();
 
       if (!canHoistDotOpEncV3(src))
         return failure();
@@ -443,8 +463,11 @@ struct MMAV3HoistLayoutConversion
     if (frontierOps.empty())
       return failure();
 
+    int minBitwidth = computeOrigBitWidth(slice, inputEltTy.getIntOrFloatBitWidth());
+    Type minType = rewriter.getIntegerType(minBitwidth);
+    // convert A operand
     auto dotOperandEnc = DotOperandEncodingAttr::get(
-        dotOp.getContext(), /*opIdx=*/0, dstEnc, /*kWidth=*/0);
+        dotOp.getContext(), /*opIdx=*/0, dstEnc, minBitwidth > 0 ? minType : inputEltTy);
 
     // For each frontierOp:
     //  load; frontierOp; ...; warp_group_dot
@@ -459,8 +482,11 @@ struct MMAV3HoistLayoutConversion
         auto operandEltTy = operandTy.getElementType();
 
         auto oldAllocTy = alloc.getType();
-        // TODO(ggengnv) previous encoding (oldAllocTy.getEncoding()) was for shared operand.
-        // Is it still appropriate for loading into registers?
+        auto oldAllocEnc = cast<SharedEncodingAttr>(oldAllocTy.getEncoding());
+        auto newAllocEnc = SharedEncodingAttr::get(oldAllocEnc.getContext(),
+            dotOperandEnc, operandTy.getShape(),
+            oldAllocEnc.getOrder(), oldAllocEnc.getCTALayout(),
+            operandEltTy.getIntOrFloatBitWidth());
         auto newAllocTy = MemDescType::get(operandTy.getShape(), operandEltTy,
                                         oldAllocTy.getEncoding(), oldAllocTy.getMemorySpace());
         auto localAlloc = rewriter.create<LocalAllocOp>(alloc.getLoc(), newAllocTy, operand);
