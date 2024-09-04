@@ -203,10 +203,10 @@ MMA16816SmemLoader::computeLdmatrixMatOffs(Value lane, Value cSwizzleOffset) {
 // vecWidth
 // <------->
 //  *#t0 ... *#t0  t1 ... t1  t2 ... t2  t3 ... t3   ||  *t0 ... *t0  t1 ... t1  t2 ... t2  t3 ... t3  /|\
-//  t4 ... t4  t5 ... t5  t6 ... t6  t7 ... t7   ||  t4 ... t4  t5 ... t5  t6 ... t6  t7 ... t7   |
-//  t8 ... t8  t9 ... t9 t10 .. t10 t11 .. t11   ||  t8 ... t8  t9 ... t9 t10 .. t10 t11 .. t11   | quad height
-// ...                                                                                            |
-// t28 .. t28 t29 .. t29 t30 .. t30 t31 .. t31   || t28 .. t28 t29 .. t29 t30 .. t30 t31 .. t31  \|/
+//   t4 ...    t4  t5 ... t5  t6 ... t6  t7 ... t7   ||   t4 ...  t4  t5 ... t5  t6 ... t6  t7 ... t7   |
+//   t8 ...    t8  t9 ... t9 t10 .. t10 t11 .. t11   ||   t8 ...  t8  t9 ... t9 t10 .. t10 t11 .. t11   | quad height
+//      ...                                                                                             |
+//   t28 ...  t28 t29 .. t29 t30 .. t30 t31 .. t31   ||   t28 .. t28 t29 .. t29 t30 .. t30 t31 .. t31  \|/
 // --------------------------------------------- || --------------------------------------------
 //  *#t0 ... *#t0  t1 ... t1  t2 ... t2  t3 ... t3   ||  t0 ... t0  t1 ... t1  t2 ... t2  t3 ... t3
 //  t4 ... t4  t5 ... t5  t6 ... t6  t7 ... t7   ||  t4 ... t4  t5 ... t5  t6 ... t6  t7 ... t7
@@ -529,9 +529,9 @@ Value composeValuesToDotOperandLayoutStruct(
   for (int b = 0; b < batch; ++b)
     for (int m = 0; m < n0; ++m)
       for (int k = 0; k < n1; ++k) {
-        elems.push_back(vals.at({b, 2 * m, 2 * k}));
-        elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
+        elems.push_back(vals.at({b, 2 * m,     2 * k}));
         elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
+        elems.push_back(vals.at({b, 2 * m,     2 * k + 1}));
         elems.push_back(vals.at({b, 2 * m + 1, 2 * k + 1}));
       }
   assert(!elems.empty());
@@ -594,6 +594,7 @@ getLoadMatrixFn(MemDescType descTy, const SharedMemoryObject &smemObj,
     auto [ha0, ha1, ha2, ha3] = loader.loadX4(
         batch, (kOrder == 2) ? a : b /*mat0*/, (kOrder == 2) ? b : a /*mat1*/,
         ptrs, matTy, getSharedMemTy(eltTy));
+
     if (!isA)
       std::swap(ha1, ha2);
     // the following is incorrect

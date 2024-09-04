@@ -385,7 +385,7 @@ static bool loadIsMMAv3(Operation *loadOp) {
   if (!sharedEnc.getHasLeadingOffset())
     return false;
 
-  // In case LHS is in registers, don't pipeline for now
+  // In case LHS is in registers, don't pipeline for now TODO(ggengnv) is this necessary?
   auto op = *alloc->getUsers().begin();
   if (auto localLoad = dyn_cast<ttg::LocalLoadOp>(op)) {
     auto resTy = cast<RankedTensorType>(localLoad->getResultTypes()[0]);

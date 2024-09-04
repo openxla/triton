@@ -62,7 +62,7 @@ bool canHoistDotOpEncV3(Operation* op) {
   // Currently, these instructions are not supported during lowering of
   // shared -> dot_operand layout. Not all types and type conversions are
   // supported.
-  if (isa<arith::TruncIOp, arith::TruncFOp, arith::SelectOp>(op))
+  if (isa<arith::SelectOp>(op))
     return false;
 
   // Don't hoist through u1 -> fp casts as they aren't supported in
@@ -416,7 +416,7 @@ struct MMAV3HoistLayoutConversion
     BackwardSliceOptions opt;
     opt.omitBlockArguments = true;
     opt.filter = [&](Operation *op) {
-      return (op->getParentRegion() == alloc->getParentRegion()) && !isa<LoadOp, LocalLoadOp>(op)
+      return (op->getParentRegion() == alloc->getParentRegion()) && !isa<LoadOp, LocalLoadOp, arith::ConstantOp>(op)
         && (op->getNumOperands() != 0);  // Ensures all ops in slice have operands
     };
 
@@ -436,8 +436,7 @@ struct MMAV3HoistLayoutConversion
       for (auto operand : currOp->getOperands()) {
         auto op = operand.getDefiningOp();
         if (!slice.contains(op)) {
-          // TODO that this is overly restrictive. Can add support for ConstantOp and LocalLoad
-          if (!isa<LoadOp>(op))
+          if (!isa<LoadOp, arith::ConstantOp>(op))
             return failure();
 
           isFrontier = true;
@@ -445,9 +444,6 @@ struct MMAV3HoistLayoutConversion
       }
 
       if (isFrontier) {
-        if (!isa<LoadOp>(currOp->getOperand(0).getDefiningOp()))
-          return failure();
-
         auto res = currOp->getResult(0);
         if (!isBlockedRankedTensor(res))
           return failure();
@@ -470,8 +466,11 @@ struct MMAV3HoistLayoutConversion
         dotOp.getContext(), /*opIdx=*/0, dstEnc, minBitwidth > 0 ? minType : inputEltTy);
 
     // For each frontierOp:
-    //  load; frontierOp; ...; warp_group_dot
-    //  -> load; local_alloc; local_load; convert_layout; frontierOp; ...; warp_group_dot
+    //  load; frontierOp; [hoistableOps...]; local_alloc; warp_group_dot
+    //  -> load; local_alloc; local_load; convert_layout; frontierOp; [hoistableOps...]; warp_group_dot
+    //  or...
+    //  constant; frontierOp; [hoistableOps...]; warp_group_dot
+    //  -> constant; convert_layout; frontierOp; [hoistableOps...]; warp_group_dot
     for (Operation *frontierOp : frontierOps) {
       auto frontierTy = dyn_cast<RankedTensorType>(frontierOp->getResult(0).getType());
 
@@ -481,20 +480,30 @@ struct MMAV3HoistLayoutConversion
         auto operandTy = cast<RankedTensorType>(operand.getType());
         auto operandEltTy = operandTy.getElementType();
 
-        auto oldAllocTy = alloc.getType();
-        auto oldAllocEnc = cast<SharedEncodingAttr>(oldAllocTy.getEncoding());
-        auto newAllocEnc = SharedEncodingAttr::get(oldAllocEnc.getContext(),
-            dotOperandEnc, operandTy.getShape(),
-            oldAllocEnc.getOrder(), oldAllocEnc.getCTALayout(),
-            operandEltTy.getIntOrFloatBitWidth());
-        auto newAllocTy = MemDescType::get(operandTy.getShape(), operandEltTy,
-                                        oldAllocTy.getEncoding(), oldAllocTy.getMemorySpace());
-        auto localAlloc = rewriter.create<LocalAllocOp>(alloc.getLoc(), newAllocTy, operand);
-        auto localLoad = rewriter.create<LocalLoadOp>(alloc.getLoc(), operandTy, localAlloc);
+        ConvertLayoutOp cvt;
 
         Type cvtTy = RankedTensorType::get(
             operandTy.getShape(), operandTy.getElementType(), dotOperandEnc);
-        auto cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, localLoad);
+
+        if (isa<LoadOp>(operand.getDefiningOp())) {
+          auto oldAllocTy = alloc.getType();
+          auto oldAllocEnc = cast<SharedEncodingAttr>(oldAllocTy.getEncoding());
+
+          auto newAllocEnc = SharedEncodingAttr::get(
+              oldAllocEnc.getContext(), dotOperandEnc, operandTy.getShape(),
+              getOrder(operandTy.getEncoding()),
+              getCTALayout(operandTy.getEncoding()),
+              operandTy.getElementType().getIntOrFloatBitWidth(), /*needTrans=*/false);
+
+          auto newAllocTy = MemDescType::get(operandTy.getShape(), operandEltTy,
+                                          newAllocEnc, oldAllocTy.getMemorySpace());
+          auto localAlloc = rewriter.create<LocalAllocOp>(alloc.getLoc(), newAllocTy, operand);
+          auto localLoad = rewriter.create<LocalLoadOp>(alloc.getLoc(), operandTy, localAlloc);
+          cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, localLoad);
+        } else {
+          assert(isa<arith::ConstantOp>(operand.getDefiningOp()));
+          cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, operand);
+        }
 
         newOperands.push_back(cvt);
       }
@@ -536,13 +545,13 @@ public:
     auto ret = pm.run(m);
 
     mlir::RewritePatternSet patterns(context);
+    patterns.add<MMAV3HoistLayoutConversion>(context);
     patterns.add<SwizzleShmemConvert>(context);
     if (this->hoistLayoutConversion.getValue()) {
       patterns.add<HoistLayoutConversion>(context);
     }
     patterns.add<FuseTransHopper>(context);
     patterns.add<MMAV3UseRegOperand>(context);
-    patterns.add<MMAV3HoistLayoutConversion>(context);
     ConvertLayoutOp::getCanonicalizationPatterns(patterns, context);
     if (failed(applyPatternsAndFoldGreedily(m, std::move(patterns))))
       signalPassFailure();
