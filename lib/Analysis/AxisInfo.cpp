@@ -195,9 +195,9 @@ public:
       dataflow::Lattice<AxisInfo>>::getLatticeElement;
   using FuncAxisInfoMapT = DenseMap<FunctionOpInterface, AxisInfo>;
 
-  LogicalResult visitOperation(
-      Operation *op, ArrayRef<const dataflow::Lattice<AxisInfo> *> operands,
-      ArrayRef<dataflow::Lattice<AxisInfo> *> results) override;
+  void visitOperation(Operation *op,
+                      ArrayRef<const dataflow::Lattice<AxisInfo> *> operands,
+                      ArrayRef<dataflow::Lattice<AxisInfo> *> results) override;
   void
   visitForOpInductionVar(scf::ForOp op,
                          ArrayRef<dataflow::Lattice<AxisInfo> *> argLattices);
@@ -1039,7 +1039,7 @@ AxisInfoAnalysis::AxisInfoAnalysis(DataFlowSolver &solver)
   visitors.append<LoadOpAxisInfoVisitor>();
 }
 
-LogicalResult AxisInfoAnalysis::visitOperation(
+void AxisInfoAnalysis::visitOperation(
     Operation *op, ArrayRef<const dataflow::Lattice<AxisInfo> *> operands,
     ArrayRef<dataflow::Lattice<AxisInfo> *> results) {
   // TODO: For sure not the right way to do this
@@ -1050,7 +1050,7 @@ LogicalResult AxisInfoAnalysis::visitOperation(
   AxisInfo curr = visitors.apply(op, operands);
   if (curr.getRank() == 0) {
     setAllToEntryStates(results);
-    return mlir::success();
+    return;
   }
   // override with hint
   auto newContiguity = curr.getContiguity();
@@ -1073,7 +1073,7 @@ LogicalResult AxisInfoAnalysis::visitOperation(
   // join all lattice elements
   for (auto *result : results)
     propagateIfChanged(result, result->join(curr));
-  return mlir::success();
+  return;
 }
 
 void AxisInfoAnalysis::visitForOpInductionVar(

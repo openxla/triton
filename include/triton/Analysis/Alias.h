@@ -85,9 +85,10 @@ public:
   }
 
   /// Computes if the alloc set of the results are changed.
-  LogicalResult visitOperation(
-      Operation *op, ArrayRef<const dataflow::Lattice<AliasInfo> *> operands,
-      ArrayRef<dataflow::Lattice<AliasInfo> *> results) override;
+  void
+  visitOperation(Operation *op,
+                 ArrayRef<const dataflow::Lattice<AliasInfo> *> operands,
+                 ArrayRef<dataflow::Lattice<AliasInfo> *> results) override;
 };
 
 } // namespace mlir
