@@ -529,9 +529,9 @@ Value composeValuesToDotOperandLayoutStruct(
   for (int b = 0; b < batch; ++b)
     for (int m = 0; m < n0; ++m)
       for (int k = 0; k < n1; ++k) {
-        elems.push_back(vals.at({b, 2 * m,     2 * k}));
+        elems.push_back(vals.at({b, 2 * m, 2 * k}));
+        elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
         elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
-        elems.push_back(vals.at({b, 2 * m,     2 * k + 1}));
         elems.push_back(vals.at({b, 2 * m + 1, 2 * k + 1}));
       }
   assert(!elems.empty());
