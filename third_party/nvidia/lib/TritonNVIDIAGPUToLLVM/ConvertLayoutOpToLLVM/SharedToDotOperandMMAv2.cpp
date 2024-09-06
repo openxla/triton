@@ -70,7 +70,6 @@ private:
   int elemBytes;
   int mmaElemBytes;
   bool isHopper;
-  bool isHopperWidthChange;
   ConversionPatternRewriter &rewriter;
   const Location &loc;
   MLIRContext *ctx{};
@@ -456,7 +455,11 @@ MMA16816SmemLoader::MMA16816SmemLoader(
       perPhase(perPhase), maxPhase(maxPhase), elemBytes(elemBytes),
       mmaElemBytes(mmaElemBytes), isHopper(isHopper),
       rewriter(rewriter), loc(loc), ctx(rewriter.getContext()) {
-  isHopperWidthChange = isHopper && (mmaElemBytes != elemBytes);
+  // If the current elemType width is different from the MMA elemType width, i.e.
+  // width-changing casting is done later in DotOp Layout... then, in the case of
+  // Hopper, the number of bytes held by each thread after loading will no longer
+  // be 32B. Hence this flag is required to stipulate different logic.
+  bool isHopperWidthChange = isHopper && (mmaElemBytes != elemBytes);
 
   contiguousMatShape = matShape[order[0]];
   stridedMatShape = matShape[order[1]];
@@ -545,19 +548,27 @@ std::vector<Value> unpackInt(const std::vector<Value> &inValues, Type elTy,
 Value composeValuesToDotOperandLayoutStruct(
     const ValueTable &vals, int batch, int n0, int n1,
     const LLVMTypeConverter *typeConverter, Location loc,
-    ConversionPatternRewriter &rewriter, Type elTy, bool unpack) {
+    ConversionPatternRewriter &rewriter, Type elTy, bool isHopper) {
   std::vector<Value> elems;
   for (int b = 0; b < batch; ++b)
     for (int m = 0; m < n0; ++m)
-      for (int k = 0; k < n1; ++k) {
-        elems.push_back(vals.at({b, 2 * m, 2 * k}));
-        elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
-        elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
-        elems.push_back(vals.at({b, 2 * m + 1, 2 * k + 1}));
-      }
+      for (int k = 0; k < n1; ++k)
+        if (isHopper) {
+          // Hopper expects opposite ordering
+          elems.push_back(vals.at({b, 2 * m, 2 * k}));
+          elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
+          elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
+          elems.push_back(vals.at({b, 2 * m + 1, 2 * k + 1}));
+        } else {
+          elems.push_back(vals.at({b, 2 * m, 2 * k}));
+          elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
+          elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
+          elems.push_back(vals.at({b, 2 * m + 1, 2 * k + 1}));
+        }
+
   assert(!elems.empty());
 
-  if (unpack) {
+  if (isHopper) {
     elems = unpackInt(elems, elTy, rewriter, loc, typeConverter);
   }
 
@@ -644,7 +655,7 @@ Value loadArg(ConversionPatternRewriter &rewriter, Location loc,
   bool isHopper = mmaLayout.getVersionMajor() == 3;
   auto shapePerCTA = getShapePerCTA(descTy);
   int bitwidth = descTy.getElementTypeBitWidth();
-  int mmaBitwidth = isHopper ? 32 / encoding.getKWidth() : bitwidth;
+  int mmaBitwidth = isHopper ? (32 / encoding.getKWidth()) : bitwidth;
 
   ValueTable vals;
   int mmaInstrM = 16, mmaInstrN = 8, mmaInstrK = 4 * 64 / mmaBitwidth;
