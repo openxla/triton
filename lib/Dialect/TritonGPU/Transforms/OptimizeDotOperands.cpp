@@ -334,8 +334,9 @@ struct MMAV3UseRegOperand
         dstEnc.getVersionMajor() != 3)
       return failure();
     auto srcTy = cast<RankedTensorType>(alloc.getSrc().getType());
+    auto kWidth = 32 / srcTy.getElementTypeBitWidth();
     auto dotOperandEnc = DotOperandEncodingAttr::get(
-        dotOp.getContext(), /*opIdx=*/0, srcEnc, /*kWidth=*/0);
+        dotOp.getContext(), /*opIdx=*/0, srcEnc, kWidth);
     auto newTy = RankedTensorType::get(srcTy.getShape(), srcTy.getElementType(),
                                        dotOperandEnc);
     if (!isMmaToDotShortcut(srcTy, newTy))
