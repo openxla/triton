@@ -70,6 +70,10 @@ private:
   int elemBytes;
   int mmaElemBytes;
   bool isHopper;
+  // If the current elemType width is different from the MMA elemType width, i.e.
+  // width-changing casting is done later in DotOp Layout... then, in the case of
+  // Hopper, the number of bytes held by each thread after loading will no longer
+  // be 32B. Hence this flag is required to stipulate different logic.
   bool isHopperWidthChange;
   ConversionPatternRewriter &rewriter;
   const Location &loc;
