@@ -76,24 +76,6 @@ bool canHoistDotOpEncV3(Operation* op) {
   return true;
 }
 
-// Logic identical to BlockedToMMA::computeOrigBitWidth()
-// This might not be necessary after pipelining is implemented for Hopper LHS registers MMA
-int computeOrigBitWidth(const SetVector<Operation*>& slice, int finalBitWidth) {
-  int origBitWidth = finalBitWidth;
-  for (auto op : slice) {
-    if (Value arg = op->getOperand(0))
-      if (auto argTy = dyn_cast<RankedTensorType>(arg.getType())) {
-        auto argBitWidth = argTy.getElementType().getIntOrFloatBitWidth();
-        if (argBitWidth != origBitWidth) {
-          origBitWidth = std::min<int>(origBitWidth, argBitWidth);
-          break;
-        }
-      }
-  }
-  return origBitWidth;
-}
-
-
 // Given
 //   convert(trans(src)) #dot_operand ->
 //   convert(local_load(trans(alloc(src))))
@@ -459,11 +441,9 @@ struct MMAV3HoistLayoutConversion
     if (frontierOps.empty())
       return failure();
 
-    int minBitwidth = computeOrigBitWidth(slice, inputEltTy.getIntOrFloatBitWidth());
-    Type minType = rewriter.getIntegerType(minBitwidth);
     // convert A operand
     auto dotOperandEnc = DotOperandEncodingAttr::get(
-        dotOp.getContext(), /*opIdx=*/0, dstEnc, minBitwidth > 0 ? minType : inputEltTy);
+        dotOp.getContext(), /*opIdx=*/0, dstEnc, inputEltTy);
 
     // For each frontierOp:
     //  load; frontierOp; [hoistableOps...]; local_alloc; warp_group_dot

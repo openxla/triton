@@ -1992,7 +1992,11 @@ unsigned NvidiaMmaEncodingAttr::getTotalElemsPerThreadForOperands(
   // H100
   if (isHopper()) {
     assert(opIdx == 0);
-    return getElemsPerThreadOfOperand(opIdx, shape);
+    auto instrMNK = getInstrShape();
+    auto wpt = getWarpsPerCTA();
+    int repM = ceil<unsigned>(shapePerCTA[0], instrMNK[0] * wpt[0]);
+    int repK = ceil<unsigned>(shapePerCTA[1], instrMNK[2]);
+    return 4 * kWidth * repM * repK;
   }
   // A100
   if (isAmpere()) {
