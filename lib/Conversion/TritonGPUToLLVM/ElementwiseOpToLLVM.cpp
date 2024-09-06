@@ -37,6 +37,8 @@ SmallVector<Value> reorderValues(const SmallVector<Value> &values, Type inType,
     return values;
   size_t inBitWidth = inTensorTy.getElementType().getIntOrFloatBitWidth();
   size_t ouBitWidth = ouTensorTy.getElementType().getIntOrFloatBitWidth();
+  auto in_shape = inTensorTy.getShape();
+
   auto ouEltTy = ouTensorTy.getElementType();
   if (inBitWidth == ouBitWidth)
     return values;
@@ -57,24 +59,39 @@ SmallVector<Value> reorderValues(const SmallVector<Value> &values, Type inType,
   }
   if (inBitWidth == 8 && ouBitWidth == 16) {
     SmallVector<Value> ret;
-    for (unsigned i = 0; i < values.size(); i += 16) {
-      ret.push_back(values[i + 0]);
-      ret.push_back(values[i + 1]);
-      ret.push_back(values[i + 2]);
-      ret.push_back(values[i + 3]);
-      ret.push_back(values[i + 8]);
-      ret.push_back(values[i + 9]);
-      ret.push_back(values[i + 10]);
-      ret.push_back(values[i + 11]);
-      ret.push_back(values[i + 4]);
-      ret.push_back(values[i + 5]);
-      ret.push_back(values[i + 6]);
-      ret.push_back(values[i + 7]);
-      ret.push_back(values[i + 12]);
-      ret.push_back(values[i + 13]);
-      ret.push_back(values[i + 14]);
-      ret.push_back(values[i + 15]);
+    if(in_shape[0] == 16 && inEncoding.getOpIdx() == 1){  // In the corner case where in_shape[0] == 16 and getOpIdx() == 1, extra elements will be loaded. It is necessary to discard these additional elements.
+      for (unsigned i = 0; i < values.size(); i += 16) {
+        ret.push_back(values[i + 0]);
+        ret.push_back(values[i + 1]);
+        ret.push_back(values[i + 2]);
+        ret.push_back(values[i + 3]);
+        ret.push_back(values[i + 8]);
+        ret.push_back(values[i + 9]);
+        ret.push_back(values[i + 10]);
+        ret.push_back(values[i + 11]);
+      }
     }
+    else{
+      for (unsigned i = 0; i < values.size(); i += 16) {
+        ret.push_back(values[i + 0]);
+        ret.push_back(values[i + 1]);
+        ret.push_back(values[i + 2]);
+        ret.push_back(values[i + 3]);
+        ret.push_back(values[i + 8]);
+        ret.push_back(values[i + 9]);
+        ret.push_back(values[i + 10]);
+        ret.push_back(values[i + 11]);
+        ret.push_back(values[i + 4]);
+        ret.push_back(values[i + 5]);
+        ret.push_back(values[i + 6]);
+        ret.push_back(values[i + 7]);
+        ret.push_back(values[i + 12]);
+        ret.push_back(values[i + 13]);
+        ret.push_back(values[i + 14]);
+        ret.push_back(values[i + 15]);
+        }
+    }
+
     return ret;
   }
   llvm_unreachable("unimplemented code path");
