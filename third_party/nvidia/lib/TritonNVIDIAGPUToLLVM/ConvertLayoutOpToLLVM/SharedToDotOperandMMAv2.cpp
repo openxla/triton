@@ -70,11 +70,6 @@ private:
   int elemBytes;
   int mmaElemBytes;
   bool isHopper;
-  // If the current elemType width is different from the MMA elemType width, i.e.
-  // width-changing casting is done later in DotOp Layout... then, in the case of
-  // Hopper, the number of bytes held by each thread after loading will no longer
-  // be 32B. Hence this flag is required to stipulate different logic.
-  bool isHopperWidthChange;
   ConversionPatternRewriter &rewriter;
   const Location &loc;
   MLIRContext *ctx{};
@@ -460,7 +455,11 @@ MMA16816SmemLoader::MMA16816SmemLoader(
       perPhase(perPhase), maxPhase(maxPhase), elemBytes(elemBytes),
       mmaElemBytes(mmaElemBytes), isHopper(isHopper),
       rewriter(rewriter), loc(loc), ctx(rewriter.getContext()) {
-  isHopperWidthChange = isHopper && (mmaElemBytes != elemBytes);
+  // If the current elemType width is different from the MMA elemType width, i.e.
+  // width-changing casting is done later in DotOp Layout... then, in the case of
+  // Hopper, the number of bytes held by each thread after loading will no longer
+  // be 32B. Hence this flag is required to stipulate different logic.
+  bool isHopperWidthChange = isHopper && (mmaElemBytes != elemBytes);
 
   contiguousMatShape = matShape[order[0]];
   stridedMatShape = matShape[order[1]];
@@ -656,7 +655,7 @@ Value loadArg(ConversionPatternRewriter &rewriter, Location loc,
   bool isHopper = mmaLayout.getVersionMajor() == 3;
   auto shapePerCTA = getShapePerCTA(descTy);
   int bitwidth = descTy.getElementTypeBitWidth();
-  int mmaBitwidth = isHopper ? 32 / encoding.getKWidth() : bitwidth;
+  int mmaBitwidth = isHopper ? (32 / encoding.getKWidth()) : bitwidth;
 
   ValueTable vals;
   int mmaInstrM = 16, mmaInstrN = 8, mmaInstrK = 4 * 64 / mmaBitwidth;

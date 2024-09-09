@@ -688,8 +688,8 @@ private:
       SmallVector<Value> reorderedVals;
       for (unsigned i = 0; i < vecVals.size(); i += 4) {
         reorderedVals.push_back(bitcast(vecVals[i], i32_ty));
-        reorderedVals.push_back(bitcast(vecVals[i + 1], i32_ty));
         reorderedVals.push_back(bitcast(vecVals[i + 2], i32_ty));
+        reorderedVals.push_back(bitcast(vecVals[i + 1], i32_ty));
         reorderedVals.push_back(bitcast(vecVals[i + 3], i32_ty));
       }
 
