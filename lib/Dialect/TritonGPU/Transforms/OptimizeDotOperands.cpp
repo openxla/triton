@@ -472,7 +472,7 @@ struct MMAV3HoistLayoutConversion
 
     // For each frontierOp (i.e. op whose defining op is not in slice):
     //  load; frontierOp; [hoistableOps...]; local_alloc; warp_group_dot
-    //  -> load; local_alloc; local_load; convert_layout; frontierOp; [hoistableOps...]; warp_group_dot
+    //  -> load; convert_layout; frontierOp; [hoistableOps...]; warp_group_dot
     //  or...
     //  constant; frontierOp; [hoistableOps...]; warp_group_dot
     //  -> constant; convert_layout; frontierOp; [hoistableOps...]; warp_group_dot
@@ -491,25 +491,7 @@ struct MMAV3HoistLayoutConversion
         Type cvtTy = RankedTensorType::get(
             operandTy.getShape(), operandTy.getElementType(), dotOperandEnc);
 
-        if (isa<LoadOp>(defOp)) {
-          auto oldAllocTy = alloc.getType();
-          auto oldAllocEnc = cast<SharedEncodingAttr>(oldAllocTy.getEncoding());
-
-          auto newAllocEnc = SharedEncodingAttr::get(
-              oldAllocEnc.getContext(), dotOperandEnc, operandTy.getShape(),
-              getOrder(operandTy.getEncoding()),
-              getCTALayout(operandTy.getEncoding()),
-              operandTy.getElementType().getIntOrFloatBitWidth(), /*needTrans=*/false);
-
-          auto newAllocTy = MemDescType::get(operandTy.getShape(), operandEltTy,
-                                          newAllocEnc, oldAllocTy.getMemorySpace());
-          auto localAlloc = rewriter.create<LocalAllocOp>(alloc.getLoc(), newAllocTy, operand);
-          auto localLoad = rewriter.create<LocalLoadOp>(alloc.getLoc(), operandTy, localAlloc);
-          cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, localLoad);
-        } else {
-          assert(isa<arith::ConstantOp>(defOp));
-          cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, operand);
-        }
+        cvt = rewriter.create<ConvertLayoutOp>(alloc.getLoc(), cvtTy, operand);
 
         op->setOperand(oprIdx, cvt);
         op->moveAfter(cvt);
