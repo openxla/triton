@@ -86,40 +86,6 @@ static void createAsyncCopy(scf::ForOp &forOp, tt::LoadOp loadOp, Value alloc,
   }
 
   tt::MemDescType allocTy = cast<tt::MemDescType>(alloc.getType());
-
-  if (loadToInfo[loadOp].isMMAv3Registers) {
-    // TODO break out if cannot cast
-    auto tensorTy = dyn_cast<RankedTensorType>(src.getType());
-    if (!tensorTy) goto deleteme;
-    auto blockEnc = dyn_cast<ttg::BlockedEncodingAttr>(tensorTy.getEncoding());
-    if (!blockEnc) goto deleteme;
-    auto order = ttg::getOrder(blockEnc);
-    auto sharedEnc = cast<ttg::SharedEncodingAttr>(allocTy.getEncoding());
-    auto sharedVec = sharedEnc.getVec();
-
-    SmallVector<unsigned> newSizePerThread;
-    llvm::transform(blockEnc.getSizePerThread(),
-        std::back_inserter(newSizePerThread),
-        [&](auto size) { return std::min(size, sharedVec); });
-
-    if (newSizePerThread != blockEnc.getSizePerThread()) {
-      auto newBlockEnc = ttg::BlockedEncodingAttr::get(
-          loadOp.getContext(),
-          newSizePerThread,
-          blockEnc.getThreadsPerWarp(),
-          blockEnc.getWarpsPerCTA(),
-          blockEnc.getOrder(),
-          blockEnc.getCTALayout()
-          );
-      auto newTy = RankedTensorType::get(tensorTy.getShape(), tensorTy.getElementType(),
-          newBlockEnc);
-      auto cvt =
-          builder.create<ttg::ConvertLayoutOp>(loadOp->getLoc(), newTy, src);
-    }
-  }
-  // TODO (ggengnv) delete
-deleteme:
-
   SmallVector<Value> copyOffsets(allocTy.getRank(), zero);
   copyOffsets[0] = insertIdx;
   Attribute sharedMemorySpace =
