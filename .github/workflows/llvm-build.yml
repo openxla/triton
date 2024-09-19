@@ -89,7 +89,7 @@ jobs:
         restore-keys: ${{ matrix.config.target-os }}-${{ matrix.config.arch }}-
 
     - name: Configure, Build, Test, and Install LLVM (Ubuntu)
-      if: matrix.config.arch == 'x64' && (matrix.config.target-os == 'ubuntu')
+      if: matrix.config.arch == 'x64' && matrix.config.target-os == 'ubuntu'
       run: >
         python3 -m pip install -r llvm-project/mlir/python/requirements.txt
 
@@ -115,7 +115,7 @@ jobs:
 
 
     - name: Configure, Build, Test, and Install LLVM (macOS x64)
-      if: matrix.config.arch == 'x64' && (matrix.config.target-os == 'macos')
+      if: matrix.config.arch == 'x64' && matrix.config.target-os == 'macos'
       run: >
         python3 -m pip install -r llvm-project/mlir/python/requirements.txt
 
@@ -140,7 +140,7 @@ jobs:
         tar czf "${{ env.llvm_install_dir }}.tar.gz" "${{ env.llvm_install_dir }}"
 
     - name: Configure, Build, Test, and Install LLVM (Windows)
-      if: matrix.config.arch == 'x64' && (matrix.config.target-os == 'windows')
+      if: matrix.config.arch == 'x64' && matrix.config.target-os == 'windows'
       run: >
         python3 -m pip install -r llvm-project/mlir/python/requirements.txt
 
