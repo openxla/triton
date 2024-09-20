@@ -1310,6 +1310,10 @@ The parent field is the layout of d.
 kWidth defines number of consecutive elements stored by one thread along k dimension.
 Some layouts do not use this parameter, either because they have a fixed number of
 elements along the K dim, or they use all elements of the tensor along the K dim.
+
+We require kWidth to be provided for Hopper because the dtype at loading might be
+different from the dtype at WGMMA, due to casting. The kWidth is determined by the
+dtype at WGMMA.
   }];
 
   let parameters = (
