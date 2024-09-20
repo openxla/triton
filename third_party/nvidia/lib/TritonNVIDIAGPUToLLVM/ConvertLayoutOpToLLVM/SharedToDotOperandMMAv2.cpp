@@ -554,7 +554,7 @@ Value composeValuesToDotOperandLayoutStruct(
     for (int m = 0; m < n0; ++m)
       for (int k = 0; k < n1; ++k)
         if (isHopper) {
-          // Hopper expects opposite ordering
+          // WGMMA.cpp expects different (m-major) ordering
           elems.push_back(vals.at({b, 2 * m, 2 * k}));
           elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
           elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
