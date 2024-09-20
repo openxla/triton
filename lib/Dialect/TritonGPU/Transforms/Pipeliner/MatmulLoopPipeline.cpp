@@ -90,13 +90,13 @@ static void createAsyncCopy(scf::ForOp &forOp, tt::LoadOp loadOp, Value alloc,
     // If the following are true...
     //   1) Operand A is for WGMMA and is to be loaded in registers
     //   2) We upcast operand A in registers before the WGMMA
-    //      (downcasting is not yet supporting)
+    //      (downcasting is not yet supported)
     //
     // ...then the SharedEncoding vec will be less than BlockedEncoding's
-    // sizePerThread, for k-dim. E.g. if shared vec is 8 and sizePerThread
-    // for k is 16, then AsyncCopyGlobalToLocal will generate two 8B-LDGSTS
+    // sizePerThread for k-dim. E.g. if shared vec is 8 and sizePerThread
+    // for k is 16, then AsyncCopyGlobalToLocal will generate two 8B-LDGSTS's
     // for each contiguous 16B global data owned by each thread. This breaks
-    // coalescing.
+    // coalescing (i.e. results 2x the minimum required transactions)
     //
     // The fix is to clip the BlockedEnc's sizePerThread using SharedEnc's vec.
     auto tensorTy = cast<RankedTensorType>(src.getType());
