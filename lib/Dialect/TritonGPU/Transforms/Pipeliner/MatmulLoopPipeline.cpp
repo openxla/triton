@@ -508,9 +508,6 @@ assignMemoryLayouts(llvm::SmallVector<std::tuple<Operation *, int, Operation *>>
         loadInfo.sharedEncoding =
             getSharedEncoding(op, /*loadIsMMAv3=*/true).value_or(nullptr);
       } else if (loadInfo.isMMAv3Registers || dot) {
-        // if warpGroupDot, we must now have operand A in registers since
-        // loadIsMMAv3Shared is false from above if-check
-
         loadInfo.sharedEncoding =
             getSharedEncIfAllUsersAreDotEnc(op->getResult(0)).value_or(nullptr);
       }
