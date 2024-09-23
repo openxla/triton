@@ -832,7 +832,7 @@ getExpandedSharedMemoryObject(ConversionPatternRewriter &rewriter, Location loc,
   return expandedSmemObj;
 }
 
-namespace SharedToDotOperandMMAv2 {
+namespace SharedToDotOperandMMAv3 {
 Value convertLayout(int opIdx, ConversionPatternRewriter &rewriter,
                     Location loc, Value tensor, DotOperandEncodingAttr encoding,
                     const SharedMemoryObject &smemObj,
@@ -853,4 +853,4 @@ Value convertLayout(int opIdx, ConversionPatternRewriter &rewriter,
                    expandedSmemObj, typeConverter, thread, false);
   }
 }
-} // namespace SharedToDotOperandMMAv2
+} // namespace SharedToDotOperandMMAv3

@@ -34,13 +34,13 @@ Value convertLayout(int opIdx, Value tensor, const SharedMemoryObject &smemObj,
 
 } // namespace SharedToDotOperandMMAv1
 
-namespace SharedToDotOperandMMAv2 {
+namespace SharedToDotOperandMMAv2OrV3 {
 Value convertLayout(int opIdx, ConversionPatternRewriter &rewriter,
                     Location loc, Value tensor,
                     DotOperandEncodingAttr bEncoding,
                     const SharedMemoryObject &smemObj,
                     const LLVMTypeConverter *typeConverter, Value thread);
-} // namespace SharedToDotOperandMMAv2
+} // namespace SharedToDotOperandMMAv2OrV3
 
 namespace {
 
@@ -96,11 +96,11 @@ private:
 
     if (mmaLayout.isHopper()) { // tensor core v3
       assert(dotOperandLayout.getOpIdx() == 0);
-      res = SharedToDotOperandMMAv2::convertLayout(
+      res = SharedToDotOperandMMAv2OrV3::convertLayout(
           0, rewriter, loc, src, dotOperandLayout,
           smemObj, typeConverter, getThreadId(rewriter, loc));
     } else if (mmaLayout.isAmpere()) { // tensor core v2
-      res = SharedToDotOperandMMAv2::convertLayout(
+      res = SharedToDotOperandMMAv2OrV3::convertLayout(
           dotOperandLayout.getOpIdx(), rewriter, loc, src, dotOperandLayout,
           smemObj, typeConverter, getThreadId(rewriter, loc));
     } else if (mmaLayout.isVolta() && isMMA) { // tensor core v1
