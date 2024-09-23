@@ -40,7 +40,27 @@ Value convertLayout(int opIdx, ConversionPatternRewriter &rewriter,
                     DotOperandEncodingAttr bEncoding,
                     const SharedMemoryObject &smemObj,
                     const LLVMTypeConverter *typeConverter, Value thread);
+} // namespace SharedToDotOperandMMAv2
+
+namespace SharedToDotOperandMMAv3 {
+Value convertLayout(ConversionPatternRewriter &rewriter,
+                    Location loc, Value tensor,
+                    DotOperandEncodingAttr bEncoding,
+                    const SharedMemoryObject &smemObj,
+                    const LLVMTypeConverter *typeConverter, Value thread) {
+  SmallVector<Value> elems;
+  // TODO(ggengnv) fix
+  for (int i = 0; i < 16; i++) {
+    elems.push_back(int_val(8, 0));
+  }
+  Type elemTy = elems[0].getType();
+  MLIRContext *ctx = elemTy.getContext();
+  Type structTy = LLVM::LLVMStructType::getLiteral(
+      ctx, SmallVector<Type>(elems.size(), elemTy));
+  auto result = packLLElements(loc, typeConverter, elems, rewriter, structTy);
+  return result;
 }
+} // namespace SharedToDotOperandMMAv3
 
 namespace {
 
@@ -88,11 +108,21 @@ private:
     auto smemObj = getSharedMemoryObjectFromStruct(loc, adaptor.getSrc(),
                                                    llvmElemTy, rewriter);
     Value res;
-    if (!isOuter && mmaLayout.isAmpere()) { // tensor core v2
+
+    if (isOuter) {
+      assert(false && "MMA Layout does not support outer product");
+      return res;
+    }
+
+    if (mmaLayout.isHopper()) { // tensor core v3
+      assert(dotOperandLayout.getOpIdx() == 0);
+      res = SharedToDotOperandMMAv3::convertLayout(rewriter, loc, src,
+          dotOperandLayout, smemObj, typeConverter, getThreadId(rewriter, loc));
+    } else if (mmaLayout.isAmpere()) { // tensor core v2
       res = SharedToDotOperandMMAv2::convertLayout(
           dotOperandLayout.getOpIdx(), rewriter, loc, src, dotOperandLayout,
           smemObj, typeConverter, getThreadId(rewriter, loc));
-    } else if (!isOuter && mmaLayout.isVolta() && isMMA) { // tensor core v1
+    } else if (mmaLayout.isVolta() && isMMA) { // tensor core v1
       bool isMMAv1Row = mmaLayout.getMMAv1IsRow(dotOperandLayout.getOpIdx());
       auto srcSharedLayout =
           cast<SharedEncodingAttr>(src.getType().getEncoding());
