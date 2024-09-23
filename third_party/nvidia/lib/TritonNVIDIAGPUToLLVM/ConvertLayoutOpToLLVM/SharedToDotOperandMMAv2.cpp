@@ -550,11 +550,18 @@ Value composeValuesToDotOperandLayoutStruct(
     const LLVMTypeConverter *typeConverter, Location loc,
     ConversionPatternRewriter &rewriter, Type elTy, bool isHopper) {
   std::vector<Value> elems;
+  // Existing convention for the ordering of quad values in llvm.struct
+  // is m-major for Hopper and k-major for Ampere, even though both Ampere
+  // and Hopper MMA's expect m-major ordering in PTX.
+  //
+  // To unify the ordering conventions would potentially require touching
+  // `ConvertLayoutOpToLLVM.cpp`, `ElementwiseOpToLLVM.cpp`, `MMAv2.cpp`,
+  // `WGMMA.cpp`, and possibly others. For now, we are using an if-check
+  // here to route to the correct ordering.
   for (int b = 0; b < batch; ++b)
     for (int m = 0; m < n0; ++m)
       for (int k = 0; k < n1; ++k)
         if (isHopper) {
-          // WGMMA.cpp expects different (m-major) ordering
           elems.push_back(vals.at({b, 2 * m, 2 * k}));
           elems.push_back(vals.at({b, 2 * m + 1, 2 * k}));
           elems.push_back(vals.at({b, 2 * m, 2 * k + 1}));
@@ -655,6 +662,9 @@ Value loadArg(ConversionPatternRewriter &rewriter, Location loc,
   bool isHopper = mmaLayout.getVersionMajor() == 3;
   auto shapePerCTA = getShapePerCTA(descTy);
   int bitwidth = descTy.getElementTypeBitWidth();
+  // For Hopper WGMMA, the sum of bitwidth of the elements in each quad should add
+  // up to 32. We use kWidth to compute the element bitwidth of the input to WGMMA,
+  // which could be different from `bitwidth` due to later casting.
   int mmaBitwidth = isHopper ? (32 / encoding.getKWidth()) : bitwidth;
 
   ValueTable vals;
@@ -662,7 +672,7 @@ Value loadArg(ConversionPatternRewriter &rewriter, Location loc,
   int matShapeM = 8, matShapeN = 8, matShapeK = 2 * 64 / mmaBitwidth;
 
   auto numRep =
-      mmaLayout.getMMAv2Rep(shapePerCTA, mmaBitwidth, encoding.getOpIdx());
+      mmaLayout.getMMAv2OrV3Rep(shapePerCTA, mmaBitwidth, encoding.getOpIdx());
   int kWidth = encoding.getKWidth();
 
   auto warpsPerCTA = mmaLayout.getWarpsPerCTA();
