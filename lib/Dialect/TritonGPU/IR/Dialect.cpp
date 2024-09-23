@@ -1961,7 +1961,7 @@ SmallVector<int> NvidiaMmaEncodingAttr::getMMAv1ShapePerWarp(int opIdx) const {
 int NvidiaMmaEncodingAttr::getMMAv1Vec(int opIdx) const {
   return 2 * getMMAv1Rep(opIdx)[opIdx];
 }
-SmallVector<int64_t> NvidiaMmaEncodingAttr::getMMAv2Rep(ArrayRef<int64_t> shape,
+SmallVector<int64_t> NvidiaMmaEncodingAttr::getMMAv2OrV3Rep(ArrayRef<int64_t> shape,
                                                         int bitwidth,
                                                         int opIdx) const {
   assert(isAmpere() || isHopper());
@@ -1996,14 +1996,15 @@ unsigned NvidiaMmaEncodingAttr::getTotalElemsPerThreadForOperands(
   if (isHopper()) {
     assert(opIdx == 0);
     auto instrMNK = getInstrShape();
-    auto wpt = getWarpsPerCTA();
-    int repM = ceil<unsigned>(shapePerCTA[0], instrMNK[0] * wpt[0]);
+    int repM = ceil<unsigned>(shapePerCTA[0], instrMNK[0] * warpsPerCTAM);
     int repK = ceil<unsigned>(shapePerCTA[1], instrMNK[2]);
+    // For each WGMMA instr, a 2x2 matrix fragment is loaded. Each thread holds
+    // kWidth elements for each quadrant. WGMMA is repeated repM * repK times.
     return 4 * kWidth * repM * repK;
   }
   // A100
   if (isAmpere()) {
-    auto rep = getMMAv2Rep(shapePerCTA, eltTy.getIntOrFloatBitWidth(), opIdx);
+    auto rep = getMMAv2OrV3Rep(shapePerCTA, eltTy.getIntOrFloatBitWidth(), opIdx);
     if (opIdx == 0)
       return 4 * rep[0] * rep[1] * rep[2];
     if (opIdx == 1)

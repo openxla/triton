@@ -1215,7 +1215,7 @@ For example, the matrix L corresponding to blockTileSize=[32,16] is:
     SmallVector<int> getMMAv1Rep(int opIdx) const;
     SmallVector<int> getMMAv1ShapePerWarp(int opIdx) const;
     int getMMAv1Vec(int opIdx) const;
-    SmallVector<int64_t> getMMAv2Rep(ArrayRef<int64_t> shape,
+    SmallVector<int64_t> getMMAv2OrV3Rep(ArrayRef<int64_t> shape,
                                      int bitwidth, int opIdx) const;
 
     bool supportReduction() const {
@@ -1324,7 +1324,7 @@ dtype at WGMMA.
   );
 
   let builders = [
-        // Specially for MMAV1(Volta)
+    // For MMAV2 and V3
     AttrBuilder<(ins "unsigned":$opIdx,
                      "Attribute":$parent,
                      "Type":$eltTy), [{
@@ -1332,8 +1332,8 @@ dtype at WGMMA.
       if (!parentAttr || (!parentAttr.isAmpere() && !parentAttr.isHopper()))
         return $_get(context, opIdx, parent, 0);
       unsigned bitwidth = eltTy.getIntOrFloatBitWidth();
-      unsigned MMAv2kWidth = 32 / bitwidth;
-      return $_get(context, opIdx, parent, MMAv2kWidth);
+      unsigned kWidth = 32 / bitwidth;
+      return $_get(context, opIdx, parent, kWidth);
     }]>
   ];
 
