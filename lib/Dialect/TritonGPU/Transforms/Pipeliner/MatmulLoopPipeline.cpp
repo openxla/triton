@@ -428,6 +428,9 @@ static MMALoadType getMMALoadType(Operation *loadOp) {
   if (auto alloc = dyn_cast<ttg::LocalAllocOp>(*loadOp->getUsers().begin())) {
     auto sharedEnc = cast<ttg::SharedEncodingAttr>(alloc.getType().getEncoding());
 
+    if (!sharedEnc.getHasLeadingOffset())
+      return MMALoadType::DoNotPipeline;
+
     // MMA V3 case.
     auto newOrder = sharedEnc.getOrder();
     auto ty = cast<RankedTensorType>(loadOp->getResultTypes()[0]);
