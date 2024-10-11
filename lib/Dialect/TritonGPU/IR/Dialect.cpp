@@ -1032,7 +1032,8 @@ LogicalResult DotOperandEncodingAttr::verify(
     if (opIdx != 0 && parentAttr.isHopper())
       return emitError()
              << "triton_gpu.dot_op opIdx parameter must be 0 for "
-                "Hopper MMA parent";
+                "Hopper MMA parent, since Hopper WGMMA only allows first "
+                "operand to be in registers";
     return success();
   }
 

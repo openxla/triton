@@ -1324,13 +1324,13 @@ dtype at WGMMA.
   );
 
   let builders = [
-    // For MMAV2 and V3
     AttrBuilder<(ins "unsigned":$opIdx,
                      "Attribute":$parent,
                      "Type":$eltTy), [{
       NvidiaMmaEncodingAttr parentAttr = mlir::dyn_cast<NvidiaMmaEncodingAttr>(parent);
       if (!parentAttr || (!parentAttr.isAmpere() && !parentAttr.isHopper()))
-        return $_get(context, opIdx, parent, 0);
+        return $_get(context, opIdx, parent, 0); // For MMAV1
+      // For MMAV2 and V3
       unsigned bitwidth = eltTy.getIntOrFloatBitWidth();
       unsigned kWidth = 32 / bitwidth;
       return $_get(context, opIdx, parent, kWidth);

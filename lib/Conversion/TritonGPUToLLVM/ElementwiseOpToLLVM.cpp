@@ -11,6 +11,24 @@ using namespace mlir::triton::gpu;
 
 namespace mlir::triton::gpu {
 
+namespace {
+
+bool isDotOpTensorAndPacked(Type srcTy) {
+  auto tensorTy = dyn_cast<RankedTensorType>(srcTy);
+  if (!tensorTy)
+    return false;
+  auto encoding = dyn_cast<DotOperandEncodingAttr>(tensorTy.getEncoding());
+  if (!encoding)
+    return false;
+  auto parentEnc = dyn_cast<NvidiaMmaEncodingAttr>(encoding.getParent());
+  // By code convention, values for Hopper's dotOp-encoded tensors are not packed
+  if (!parentEnc || parentEnc.isHopper())
+    return false;
+  return true;
+}
+
+} // namespace
+
 Type getElementType(Value value) {
   auto type = value.getType();
   if (auto tensorType = dyn_cast<RankedTensorType>(type))
@@ -83,15 +101,9 @@ SmallVector<Value> reorderValues(const SmallVector<Value> &values, Type inType,
 SmallVector<Value> unpackI32(const SmallVector<Value> &inValues, Type srcTy,
                              ConversionPatternRewriter &rewriter, Location loc,
                              const LLVMTypeConverter *typeConverter) {
-  auto tensorTy = dyn_cast<RankedTensorType>(srcTy);
-  if (!tensorTy)
+  if (!isDotOpTensorAndPacked(srcTy))
     return inValues;
-  auto encoding = dyn_cast<DotOperandEncodingAttr>(tensorTy.getEncoding());
-  if (!encoding)
-    return inValues;
-  auto parentEnc = dyn_cast<NvidiaMmaEncodingAttr>(encoding.getParent());
-  if (!parentEnc || parentEnc.isHopper())
-    return inValues;
+  auto tensorTy = cast<RankedTensorType>(srcTy);
 
   SmallVector<Value> outValues;
   for (auto v : inValues) {
@@ -109,15 +121,9 @@ SmallVector<Value> unpackI32(const SmallVector<Value> &inValues, Type srcTy,
 SmallVector<Value> packI32(const SmallVector<Value> &inValues, Type srcTy,
                            ConversionPatternRewriter &rewriter, Location loc,
                            const LLVMTypeConverter *typeConverter) {
-  auto tensorTy = dyn_cast<RankedTensorType>(srcTy);
-  if (!tensorTy)
+  if (!isDotOpTensorAndPacked(srcTy))
     return inValues;
-  auto encoding = dyn_cast<DotOperandEncodingAttr>(tensorTy.getEncoding());
-  if (!encoding)
-    return inValues;
-  auto parentEnc = dyn_cast<NvidiaMmaEncodingAttr>(encoding.getParent());
-  if (!parentEnc || parentEnc.isHopper())
-    return inValues;
+  auto tensorTy = cast<RankedTensorType>(srcTy);
 
   SmallVector<Value> outValues;
   auto eltType = typeConverter->convertType(tensorTy.getElementType());

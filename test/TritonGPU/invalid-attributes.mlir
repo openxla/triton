@@ -30,7 +30,7 @@
 
 // -----
 
-// expected-error@+2 {{triton_gpu.dot_op opIdx parameter must be 0 for Hopper MMA parent}}
+// expected-error@+2 {{triton_gpu.dot_op opIdx parameter must be 0 for Hopper MMA parent, since Hopper WGMMA only allows first operand to be in registers}}
 #mma = #triton_gpu.nvidia_mma<{versionMajor = 3, warpsPerCTA = [1, 1], CTAsPerCGA = [1, 1], CTASplitNum = [1, 1], CTAOrder = [0, 1], instrShape = [16, 8]}>
 #dot_op = #triton_gpu.dot_op<{opIdx = 1, parent = #mma, kWidth = 8}>
 
