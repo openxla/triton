@@ -131,19 +131,21 @@ public:
     // bitwidth is unable to realize that there is a mixed-precision dot
     // (hence kWidth = 1) but wants to hoist through the type conversion.
     if (isa<arith::ExtFOp>(src) && dotOpEnc.getKWidth() == 1)
-        return failure();
+      return failure();
 
-    // Only consider custom conversions or arith ops.
+    // Only consider custom conversions, math or arith ops.
     // TODO(jlebar): Is this too restrictive?
     if (!isa<FpToFpOp, BitcastOp>(src) && !isPureUnaryInlineAsm(src) &&
-        src->getDialect()->getTypeID() != TypeID::get<arith::ArithDialect>())
+        src->getDialect()->getTypeID() != TypeID::get<arith::ArithDialect>() &&
+        src->getDialect()->getTypeID() != TypeID::get<math::MathDialect>())
       return failure();
 
     // Currently, these instructions are not supported during lowering of
     // shared -> dot_operand layout. Not all types and type conversions are
     // supported.
-    if (isa<arith::TruncIOp, arith::TruncFOp, arith::SelectOp>(src))
+    if (isa<arith::SelectOp>(src)) {
       return failure();
+    }
 
     // Don't hoist through u1 -> fp casts as they aren't supported in
     // ElementwiseOpToLLVM::reorderValues().
