@@ -223,6 +223,7 @@ Value generateWMMAIntrinsic(ConversionPatternRewriter &rewriter, Location loc,
   auto wmmaIntrinsic = LLVM::createLLVMIntrinsicCallOp(
       rewriter, loc, name, valC.getType(), operands);
   return wmmaIntrinsic.getResult(0);
+
 }
 
 Value generateWMMAOp(ConversionPatternRewriter &rewriter, Location loc,

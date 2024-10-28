@@ -56,20 +56,20 @@ TritonGPUTypeConverter::TritonGPUTypeConverter(MLIRContext *context,
   // This will create newArg, and map(origArg, newArg)
   addArgumentMaterialization([&](OpBuilder &builder,
                                  RankedTensorType tensorType, ValueRange inputs,
-                                 Location loc) -> std::optional<Value> {
+                                 Location loc) -> Value {
     llvm_unreachable("Argument rematerialization should not happen in Triton "
                      "-> TritonGPU conversion");
-    return std::nullopt;
+    return Value();
   });
 
   // If the origValue still has live user(s), use this to
   // convert origValue to newValue
   addSourceMaterialization([&](OpBuilder &builder, RankedTensorType tensorType,
                                ValueRange inputs,
-                               Location loc) -> std::optional<Value> {
+                               Location loc) -> Value {
     llvm_unreachable("Source rematerialization should not happen in Triton -> "
                      "TritonGPU Conversion");
-    return std::nullopt;
+    return Value();
   });
 
   // This will be called when (desiredType != newOperandType)
@@ -79,7 +79,7 @@ TritonGPUTypeConverter::TritonGPUTypeConverter(MLIRContext *context,
                                ValueRange inputs, Location loc) {
     auto cast =
         builder.create<triton::gpu::ConvertLayoutOp>(loc, tensorType, inputs);
-    return std::optional<Value>(cast.getResult());
+    return Value(cast.getResult());
   });
 }
 

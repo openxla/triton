@@ -1,4 +1,5 @@
 #include "TargetInfo.h"
+
 #include "TritonAMDGPUToLLVM/GCNAsmFormat.h"
 #include "Utility.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -37,24 +38,21 @@ Value printfPromoteValue(RewriterBase &rewriter, Value value) {
 
   if (auto floatType = dyn_cast<FloatType>(type)) {
     Value newValue = value;
-    if (!floatType.isF64())
-      newValue = fpext(f64_ty, newValue);
+    if (!floatType.isF64()) newValue = fpext(f64_ty, newValue);
     return bitcast(newValue, i64_ty);
   }
 
   assert(type.isIntOrIndex());
   if (type.getIntOrFloatBitWidth() < 64) {
-    if (type.isUnsignedInteger())
-      return zext(ui64_ty, value);
-    if (type.isSignedInteger())
-      return sext(i64_ty, value);
+    if (type.isUnsignedInteger()) return zext(ui64_ty, value);
+    if (type.isSignedInteger()) return sext(i64_ty, value);
     // Signless integers are printed using unsigned integer formats.
     return zext(i64_ty, value);
   }
 
   return value;
 }
-} // namespace
+}  // namespace
 
 int TargetInfo::getSharedMemorySize() const { return 64 * 1024; }
 
@@ -245,4 +243,4 @@ void TargetInfo::assertFail(RewriterBase &rewriter, Location loc,
 
 int TargetInfo::getSharedAddressSpace() const { return 3; }
 
-} // namespace mlir::triton::AMD
+}  // namespace mlir::triton::AMD

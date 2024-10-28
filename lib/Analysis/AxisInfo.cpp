@@ -937,7 +937,7 @@ private:
       // Treat [2^n,2^n+1,...]'s divisibility as 1 instead of 2^n
       lhsDivisibility = 1;
     }
-    return std::max<int64_t>(1, lhsDivisibility / (1 << shift));
+    return std::max<int64_t>(1, lhsDivisibility / (int64_t(1) << shift));
   }
 
   int64_t getConstancy(OpTy op, const AxisInfo &lhs, const AxisInfo &rhs,
@@ -1084,8 +1084,8 @@ LogicalResult AxisInfoAnalysis::visitOperation(
 
 void AxisInfoAnalysis::visitForOpInductionVar(
     scf::ForOp op, ArrayRef<dataflow::Lattice<AxisInfo> *> argLattices) {
-  auto lb = getLatticeElementFor(op, op.getLowerBound())->getValue();
-  auto step = getLatticeElementFor(op, op.getStep())->getValue();
+  auto lb = getLatticeElementFor(getProgramPointAfter(op), op.getLowerBound())->getValue();
+  auto step = getLatticeElementFor(getProgramPointAfter(op), op.getStep())->getValue();
 
   AxisInfo::DimVectorT knownContiguity(1, 1);
   AxisInfo::DimVectorT knownDivisibility(1, 1);

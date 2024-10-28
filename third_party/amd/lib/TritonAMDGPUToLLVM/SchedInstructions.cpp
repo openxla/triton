@@ -1,5 +1,4 @@
 #include "TritonAMDGPUToLLVM/Passes.h"
-
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "third_party/amd/include/Dialect/TritonAMDGPU/IR/Dialect.h"
@@ -10,7 +9,7 @@ namespace mlir::triton {
 #define GEN_PASS_DEF_INSERTINSTRUCTIONSCHEDHINTS
 #define GEN_PASS_DEF_LOWERINSTRUCTIONSCHEDHINTS
 #include "TritonAMDGPUToLLVM/Passes.h.inc"
-} // namespace mlir::triton
+}  // namespace mlir::triton
 
 using namespace mlir;
 
@@ -79,7 +78,6 @@ Operation *createIglpOpt(PatternRewriter &rewriter, Location loc, int value) {
 
 struct InstructionSchedHintsRewriter
     : public OpRewritePattern<triton::amdgpu::InstructionSchedHint> {
-
   InstructionSchedHintsRewriter(mlir::MLIRContext *ctx, std::string variant)
       : OpRewritePattern(ctx) {
     std::transform(variant.begin(), variant.end(), variant.begin(),
@@ -94,10 +92,9 @@ struct InstructionSchedHintsRewriter
 
   enum class SchedulingType : uint32_t { NONE = 0, IGLP0, IGLP1, UNKNOWN };
 
-  LogicalResult
-  matchAndRewrite(triton::amdgpu::InstructionSchedHint instructionSchedHint,
-                  PatternRewriter &rewriter) const override {
-
+  LogicalResult matchAndRewrite(
+      triton::amdgpu::InstructionSchedHint instructionSchedHint,
+      PatternRewriter &rewriter) const override {
     if (this->schedulingType == SchedulingType::UNKNOWN) {
       llvm::dbgs()
           << "[" << getDebugName() << "]: "
@@ -122,17 +119,17 @@ struct InstructionSchedHintsRewriter
     rewriter.setInsertionPoint(block, std::prev(block->end()));
 
     switch (schedulingType) {
-    case SchedulingType::IGLP0:
-      [[fallthrough]];
-    case SchedulingType::IGLP1: {
-      createIglpOpt(rewriter, loc, static_cast<int>(schedulingType) - 1);
-      break;
-    }
-    case SchedulingType::NONE:
-      [[fallthrough]];
-    default: {
-      break;
-    }
+      case SchedulingType::IGLP0:
+        [[fallthrough]];
+      case SchedulingType::IGLP1: {
+        createIglpOpt(rewriter, loc, static_cast<int>(schedulingType) - 1);
+        break;
+      }
+      case SchedulingType::NONE:
+        [[fallthrough]];
+      default: {
+        break;
+      }
     }
 
     if (limitSchedulingRange)
@@ -142,14 +139,13 @@ struct InstructionSchedHintsRewriter
     return mlir::success();
   }
 
-private:
+ private:
   SchedulingType schedulingType;
 };
 
 struct LowerInstructionSchedHints
     : public triton::impl::LowerInstructionSchedHintsBase<
           LowerInstructionSchedHints> {
-
   explicit LowerInstructionSchedHints(std::string variant) {
     this->variant = variant;
   }
@@ -188,11 +184,11 @@ struct InsertInstructionSchedHints
     });
   }
 };
-} // namespace
+}  // namespace
 
 namespace mlir::triton {
-std::unique_ptr<OperationPass<ModuleOp>>
-createLowerInstructionSchedHintsPass(std::string variant) {
+std::unique_ptr<OperationPass<ModuleOp>> createLowerInstructionSchedHintsPass(
+    std::string variant) {
   return std::make_unique<LowerInstructionSchedHints>(variant);
 }
 
@@ -200,4 +196,4 @@ std::unique_ptr<OperationPass<ModuleOp>>
 createInsertInstructionSchedHintsPass() {
   return std::make_unique<InsertInstructionSchedHints>();
 }
-} // namespace mlir::triton
+}  // namespace mlir::triton
