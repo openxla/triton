@@ -761,7 +761,7 @@ class tensor(_value):
 
     @builtin
     def __add__(self, other, _builder=None):
-        return add(self, other, sanitize_overflow=True, _builder=_builder)
+        return add(self, other, sanitize_overflow=False, _builder=_builder)
 
     @builtin
     def __radd__(self, other, _builder=None):
@@ -777,7 +777,7 @@ class tensor(_value):
 
     @builtin
     def __mul__(self, other, _builder=None):
-        return mul(self, other, sanitize_overflow=True, _builder=_builder)
+        return mul(self, other, sanitize_overflow=False, _builder=_builder)
 
     @builtin
     def __rmul__(self, other, _builder=None):
@@ -1897,7 +1897,7 @@ def where(condition, x, y, _builder=None):
 
 
 @builtin
-def add(x, y, sanitize_overflow: constexpr = True, _builder=None):
+def add(x, y, sanitize_overflow: constexpr = False, _builder=None):
     x = _unwrap_if_constexpr(x)
     y = _unwrap_if_constexpr(y)
     return semantic.add(x, y, sanitize_overflow, _builder)
@@ -1911,7 +1911,7 @@ def sub(x, y, sanitize_overflow: constexpr = True, _builder=None):
 
 
 @builtin
-def mul(x, y, sanitize_overflow: constexpr = True, _builder=None):
+def mul(x, y, sanitize_overflow: constexpr = False, _builder=None):
     x = _unwrap_if_constexpr(x)
     y = _unwrap_if_constexpr(y)
     return semantic.mul(x, y, sanitize_overflow, _builder)

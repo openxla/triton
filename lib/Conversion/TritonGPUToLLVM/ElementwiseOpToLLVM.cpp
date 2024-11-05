@@ -59,7 +59,8 @@ SmallVector<Value> reorderValues(const SmallVector<Value> &values, Type inType,
   auto ouEltTy = ouTensorTy.getElementType();
   if (inBitWidth == ouBitWidth)
     return values;
-  if (inBitWidth == 16 && ouBitWidth == 32) {
+  if ((inBitWidth == 16 && ouBitWidth == 32) ||
+      (inBitWidth == 32 && ouBitWidth == 16)) {
     // Register layout conversion:
     //
     //   [0, 1], [4, 5]  ⟶  [0], [1], [4], [5]
@@ -85,7 +86,8 @@ SmallVector<Value> reorderValues(const SmallVector<Value> &values, Type inType,
     }
     return ret;
   }
-  if (inBitWidth == 8 && ouBitWidth == 16) {
+  if ((inBitWidth == 8 && ouBitWidth == 16) ||
+      (inBitWidth == 16 && ouBitWidth == 8)) {
     // Register layout conversion:
     //
     //   [0, 1, 2, 3], [8, 9, 10, 11]  ⟶  [0, 1], [2, 3], [8, 9], [10, 11]

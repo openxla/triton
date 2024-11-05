@@ -108,8 +108,6 @@ def TT_FpToFpOp : TT_Op<"fp_to_fp", [SameOperandsAndResultShape,
     let assemblyFormat = "$src attr-dict  (`,` `rounding` `=` $rounding^)? `:` type($src) `->` type($result)";
 
     let hasVerifier = 1;
-
-    let hasFolder = 1;
 }
 
 //
