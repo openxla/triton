@@ -44,8 +44,7 @@ public:
       return;
     ModuleOp mod = getOperation();
     mod.walk([&](Operation *op) {
-      if (!isa<ttng::WarpGroupDotOp>(op))
-        return WalkResult::advance();
+      if (!op->hasTrait<OpTrait::DotLike>()) return WalkResult::advance();
       OpBuilder builder(op);
       auto a = op->getOperand(0);
       auto b = op->getOperand(1);
@@ -79,8 +78,7 @@ private:
     static DenseSet<std::pair<Operation *, unsigned>> trace;
     auto op = operand.getDefiningOp();
     // avoid redundant insertion
-    if (op && op->hasTrait<OpTrait::DotLike>())
-      return false;
+    if (op && op->hasTrait<OpTrait::DotLike>()) return false;
     // reach convertlayout
     if (op && isa<ttg::LocalAllocOp>(op) &&
         cast<ttg::LocalAllocOp>(op).getSrc())

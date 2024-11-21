@@ -544,12 +544,15 @@ Value composeValuesToDotOperandLayoutStruct(
   // unpacked into individual elements.
   // `kIters` specifies the number of contiguous int32 elements each thread
   // should load.
-  auto kIters = isHopper ? 1 : kWidth / (32 / bitwidth);
+  // `kSize` specifies the total number of int32 elements each thread should
+  // load.
+  int kIters = isHopper ? 1 : kWidth / (32 / bitwidth);
+  int kSize = repK >= kIters ? repK * 2 : kIters;
 
   std::vector<Value> elems;
   auto unpackVec = [&](int b, int m, int k) {
-    for (auto kIter = 0; kIter < kIters; ++kIter) {
-      auto val = vals.at({b, m, k + kIter});
+    for (int kIter = 0; kIter < kIters; ++kIter) {
+      auto val = vals.at({b, m, (k + kIter) % kSize});
       auto vec = bitcast(val, vecTy);
       for (auto i = 0; i < numElemsPerVec; ++i) {
         elems.push_back(extract_element(eltTy, vec, i32_val(i)));

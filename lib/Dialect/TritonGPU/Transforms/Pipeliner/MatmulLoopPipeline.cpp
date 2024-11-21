@@ -464,7 +464,8 @@ assignMemoryLayouts(scf::ForOp &forOp,
       }
     });
 
-    loadsToPipeline.insert(&op);
+    // TODO: b/381421713 - Uncomment this once pipelining is fixed.
+    // loadsToPipeline.insert(&op);
     LoadInfo loadInfo;
     for (auto use : users) {
       if (use->hasTrait<OpTrait::DotLike>()) {
@@ -497,6 +498,11 @@ assignMemoryLayouts(scf::ForOp &forOp,
               getBlockedEncoding(loadOp, axisInfoAnalysis);
       }
     }
+
+    // TODO: b/381421713 - Remove this once pipelining is fixed.
+    if (!loadInfo.sharedEncoding) continue;
+    loadsToPipeline.insert(&op);
+
     loadToInfo[&op] = loadInfo;
   }
   // Make sure all loads in loadsToPipeline are in loadToInfo.
