@@ -111,6 +111,7 @@ static int createAsyncCopy(scf::ForOp forOp, tt::LoadOp loadOp, Value alloc,
 
   Value zero = builder.createWithStage<arith::ConstantIntOp>(
       forOp.getLoc(), stage, clusterId, 0, 32);
+
   // Replace the load with insert/extract slice.
   builder.setInsertionPoint(loadOp);
   Location loc = loadOp.getLoc();
@@ -467,7 +468,8 @@ assignMemoryLayouts(scf::ForOp &forOp,
       }
     });
 
-    loadsToPipeline.insert(&op);
+    // TODO: b/381421713 - Uncomment this once pipelining is fixed.
+    // loadsToPipeline.insert(&op);
     LoadInfo loadInfo;
     for (auto use : users) {
       if (use->hasTrait<OpTrait::DotLike>()) {
@@ -507,6 +509,11 @@ assignMemoryLayouts(scf::ForOp &forOp,
               getBlockedEncoding(loadOp, axisInfoAnalysis);
       }
     }
+
+    // TODO: b/381421713 - Remove this once pipelining is fixed.
+    if (!loadInfo.sharedEncoding) continue;
+    loadsToPipeline.insert(&op);
+
     loadToInfo[&op] = loadInfo;
   }
   // Make sure all loads in loadsToPipeline are in loadToInfo.
