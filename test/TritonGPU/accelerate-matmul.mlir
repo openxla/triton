@@ -261,3 +261,21 @@ module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32, ttg.targ
     tt.return
   }
 }
+
+// -----
+
+// CHECK-DAG: #[[$BLOCKED:.*]] = #ttg.blocked
+// CHECK-DAG: #mma = #ttg.nvidia_mma<{versionMajor = 3
+#blocked = #ttg.blocked<{sizePerThread = [4, 4], threadsPerWarp = [4, 8], warpsPerCTA = [4, 1], order = [1, 0]}>
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32, ttg.target = "cuda:90", "ttg.threads-per-warp" = 32 : i32} {
+  tt.func @local_alloc_dot_operand(%in0:  tensor<64x256xf32, #ttg.dot_op<{opIdx = 0, parent = #blocked}>> {tt.divisibility = 16 : i32}, %in1: f32, %in2: tensor<64x32xf32, #blocked>) -> (tensor<64x32xf32, #blocked>) {
+    // CHECK-LABEL: local_alloc_dot_operand
+    %splat_in1 = tt.splat %in1 : f32 -> tensor<256x32xf32, #ttg.dot_op<{opIdx = 1, parent = #blocked}>>
+    // CHECK: %[[LHS_LOCAL_ALLOC:.*]] = ttg.local_alloc
+    // CHECK: %[[RHS_CVT:.*]] = ttg.convert_layout {{.*}} #ttg.dot_op<{{.*}}> -> {{.*}} #[[$BLOCKED]]
+    // CHECK: %[[RHS_LOCAL_ALLOC:.*]] = ttg.local_alloc %[[RHS_CVT]]
+    // CHECK: ttng.warp_group_dot %[[LHS_LOCAL_ALLOC]], %[[RHS_LOCAL_ALLOC]]
+    %res = tt.dot %in0, %splat_in1, %in2, inputPrecision = tf32 : tensor<64x256xf32, #ttg.dot_op<{opIdx = 0, parent = #blocked}>> * tensor<256x32xf32, #ttg.dot_op<{opIdx = 1, parent = #blocked}>> -> tensor<64x32xf32, #blocked>
+    tt.return %res :  tensor<64x32xf32, #blocked>
+  }
+}

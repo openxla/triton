@@ -89,8 +89,8 @@ int64_t getSwizzlingFromLayout(const SharedEncodingAttr &layout,
   return swizzlingByteWidth;
 }
 
-static Value createDescriptor(ConversionPatternRewriter &rewriter, Location loc,
-                              int64_t swizzling, uint32_t stride) {
+Value createDescriptor(ConversionPatternRewriter &rewriter, Location loc,
+                       int64_t swizzling, uint32_t stride) {
   // Create descriptor based on the format described in the spec:
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-shared-memory-layout-matrix-descriptor
   union WGMMADescriptor {

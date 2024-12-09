@@ -57,6 +57,12 @@ TritonGPUTypeConverter::TritonGPUTypeConverter(MLIRContext *context,
   addArgumentMaterialization([&](OpBuilder &builder,
                                  RankedTensorType tensorType, ValueRange inputs,
                                  Location loc) -> Value {
+    // Allows partial TTIR to TTGIR conversion by materializing a conversion for
+    // remaining arguments that have been converted to a new type.
+    // We use this to rewrite triton_xla.sparse_dot in a separate pass after
+    // 'convert-triton-to-tritongpu'.
+    return builder.create<triton::gpu::ConvertLayoutOp>(loc, tensorType,
+                                                        inputs);
     llvm_unreachable("Argument rematerialization should not happen in Triton "
                      "-> TritonGPU conversion");
     return {};
@@ -66,6 +72,12 @@ TritonGPUTypeConverter::TritonGPUTypeConverter(MLIRContext *context,
   // convert origValue to newValue
   addSourceMaterialization([&](OpBuilder &builder, RankedTensorType tensorType,
                                ValueRange inputs, Location loc) -> Value {
+    // Allows partial TTIR to TTGIR conversion by materializing a conversion for
+    // remaining uses of values that have been converted to a new type.
+    // We use this to rewrite triton_xla.sparse_dot in a separate pass after
+    // 'convert-triton-to-tritongpu'.
+    return builder.create<triton::gpu::ConvertLayoutOp>(loc, tensorType,
+                                                        inputs);
     llvm_unreachable("Source rematerialization should not happen in Triton -> "
                      "TritonGPU Conversion");
     return {};

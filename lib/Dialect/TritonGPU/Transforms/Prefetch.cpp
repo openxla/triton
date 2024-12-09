@@ -116,7 +116,7 @@ Value Prefetcher::generatePrefetch(Value v, unsigned opIdx, bool isPrologue,
   // opIdx: 0 => a, 1 => b
   auto type = cast<triton::gpu::MemDescType>(v.getType());
   SmallVector<int64_t> shape{type.getShape().begin(), type.getShape().end()};
-  SmallVector<int64_t> offset{0, 0};
+  SmallVector<int64_t> offset(shape.size(), 0);
   Type elementType = type.getElementType();
 
   // k => (prefetchWidth, k - prefetchWidth)
@@ -141,8 +141,14 @@ Value Prefetcher::generatePrefetch(Value v, unsigned opIdx, bool isPrologue,
           type.getMutableMemory(), type.getAllocShape()),
       v, offsetsVal);
 
+  // We need to assign kwidth to zero in the case where the parent layout is
+  // Blocked, otherwise the verifier emits a failure. The parent layout is
+  // Blocked only when Tensor Cores are disabled.
+  int kwidth = dyn_cast<triton::gpu::BlockedEncodingAttr>(dotEncoding)
+                   ? 0
+                   : prefetchWidth / 8;
   auto dotOperandEnc = triton::gpu::DotOperandEncodingAttr::get(
-      builder.getContext(), opIdx, dotEncoding, prefetchWidth / 8);
+      builder.getContext(), opIdx, dotEncoding, kwidth);
   Value prefetchSlice = builder.create<triton::gpu::LocalLoadOp>(
       v.getLoc(), RankedTensorType::get(shape, elementType, dotOperandEnc),
       newSmem);
@@ -191,6 +197,22 @@ LogicalResult Prefetcher::initialize() {
         break;
       if (!op->getResult(0).hasOneUse())
         break;
+      // Similar to issues faced in HoistLayoutConversion pattern in
+      // OptimizeDotOperands.cpp, we can't propagate through type casts from
+      // predicates as they aren't supported in Triton when encoded with dot_op
+      // layout.
+      if (isa<arith::UIToFPOp>(op)) {
+        Type srcType = getElementTypeOrSelf(op->getOperand(0));
+        if (srcType.isInteger(1))
+          break;
+      }
+      // Propagation through ExpandDims is currently not supported. This blindly
+      // replaces the encoding with dot encoding & but ExpandDims requires a
+      // SliceEncoding. This could be rewritten to support it somehow, but I
+      // don't think it's trivial & it's currently crashing.
+      if (isa<ExpandDimsOp>(op)) {
+        break;
+      }
       rets.push_back(op->getOperand(0));
       if (auto cvt = dyn_cast<triton::gpu::LocalLoadOp>(op)) {
         foundConvertFromShared = true;
