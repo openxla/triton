@@ -20,8 +20,6 @@ namespace mlir {
 namespace triton {
 namespace gpu {
 
-namespace {
-
 // Get the highest version supported for the hardware and the dot.
 static int getMMAVersionSafe(int computeCapability, DotOp op) {
   // List supported mma version in order of preference.
@@ -44,8 +42,8 @@ static int getMMAVersionSafe(int computeCapability, DotOp op) {
   return 0;
 }
 
-SmallVector<unsigned> warpsPerTileV2(DotOp dotOp, const ArrayRef<int64_t> shape,
-                                     int numWarps) {
+SmallVector<unsigned>
+warpsPerTileV2(Operation *dotOp, const ArrayRef<int64_t> shape, int numWarps) {
   auto rank = shape.size();
   // Early exit for batched matmul
   if (rank == 3)
@@ -109,10 +107,10 @@ SmallVector<unsigned> warpsPerTileV2(DotOp dotOp, const ArrayRef<int64_t> shape,
 }
 
 SmallVector<unsigned, 2>
-warpsPerTileV3(DotOp dotOp, const ArrayRef<int64_t> shape, int numWarps,
+warpsPerTileV3(Operation *dotOp, const ArrayRef<int64_t> shape, int numWarps,
                const SmallVector<unsigned, 3> &instrShape) {
   SetVector<Operation *> slices;
-  mlir::getForwardSlice(dotOp.getResult(), &slices);
+  mlir::getForwardSlice(dotOp->getResult(0), &slices);
   // Contains a chained dot. We prefer to assign warps to one axis
   // to facilitate use cases like flash attention, allowing reductions within
   // the same warp.
@@ -167,11 +165,26 @@ static Value getSharedMemoryMMAOperand(Value v, mlir::PatternRewriter &rewriter,
   auto newType = MemDescType::get(argType.getShape(), argType.getElementType(),
                                   newLayout, SharedMemorySpace);
   rewriter.setInsertionPointAfterValue(arg);
+
+  // LocalAllocOp lowering doesn't support going from DotOperandEncoding
+  // to SharedEncoding.
+  if (auto dotOpEnc = mlir::dyn_cast<DotOperandEncodingAttr>(
+          argType.getEncoding())) {
+    // Create a layout conversion from DotOperandEncoding to BlockedEncoding
+    // then pass it to the LocalAllocOp.
+    auto newArgType = RankedTensorType::get(
+        argType.getShape(), argType.getElementType(), dotOpEnc.getParent());
+    auto dotOperandToBlockedCvt =
+        rewriter.create<ConvertLayoutOp>(arg.getLoc(), newArgType, arg);
+    return rewriter.create<LocalAllocOp>(arg.getLoc(), newType,
+                                              dotOperandToBlockedCvt);
+  }
+
   return rewriter.create<LocalAllocOp>(arg.getLoc(), newType, arg);
 }
 
 SmallVector<unsigned, 3>
-getWarpsPerTile(DotOp dotOp, const ArrayRef<int64_t> shape, int version,
+getWarpsPerTile(Operation* dotOp, const ArrayRef<int64_t> shape, int version,
                 int numWarps, const SmallVector<unsigned, 3> &instrShape) {
   switch (version) {
   case 2:
@@ -184,11 +197,24 @@ getWarpsPerTile(DotOp dotOp, const ArrayRef<int64_t> shape, int version,
   }
 }
 
+// Move anonymous namespace down, so getWarpsPerTile is visible to the sparsity
+// extension.
+namespace {
+
 class BlockedToMMA : public mlir::OpRewritePattern<DotOp> {
   int computeCapability;
   mutable llvm::DenseMap<Operation *, unsigned> dotOpInstNs;
 
   static bool bwdFilter(Operation *op) {
+    // Dot operand layout assignment to Predicates are not currently supported
+    // during lowering from TritonGPU to LLVM in Triton for MMA cases. This
+    // condition limits visibility of the original bit-width so that predicate
+    // are not considered, hence, kwidth can never be = 32.
+    if (isa<arith::UIToFPOp>(op)) {
+      Type srcType = getElementTypeOrSelf(op->getOperand(0));
+      if (srcType.isInteger(1))
+        return false;
+    }
     return op->getNumOperands() == 1 &&
            (isa<FpToFpOp, BitcastOp, ConvertLayoutOp>(op) ||
             isPureUnaryInlineAsm(op) ||
@@ -196,6 +222,7 @@ class BlockedToMMA : public mlir::OpRewritePattern<DotOp> {
                 mlir::TypeID::get<arith::ArithDialect>());
   }
 
+public:
   // Finds the first different bitwidth in the chain of shape-preserving
   // unary ops that x depends on.
   // There are two primary scenarios:
@@ -805,6 +832,15 @@ public:
     decomposeMixedModeDotOp(m, computeCapability);
   }
 };
+
+// Expose helper functions from BlockedToMMA to be reused for sparse matmul.
+int computeOrigBitWidth(Value x) {
+  return BlockedToMMA::computeOrigBitWidth(x);
+}
+Value getSharedMemMMAOperand(Value v, mlir::PatternRewriter &rewriter,
+                                int opIdx, bool allowTranspose) {
+  return getSharedMemoryMMAOperand(v, rewriter, opIdx, allowTranspose);
+}
 
 } // namespace gpu
 } // namespace triton

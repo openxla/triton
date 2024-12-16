@@ -1698,7 +1698,8 @@ module attributes {"ttg.target" = "cuda:75", "ttg.num-ctas" = 1 : i32, "ttg.num-
   // CHECK-LABEL: convert_single_element
   // CHECK-NOT: llvm.store
   // CHECK-NOT: llvm.load
-  // CHECK: llvm.return
+  // CHECK: llvm.insertvalue
+  // CHECK: llvm.extractvalue
   tt.func public @convert_single_element() attributes {noinline = false} {
     %cst = arith.constant dense<1.000000e+03> : tensor<1xf32, #blocked1>
     %0 = ttg.convert_layout %cst : tensor<1xf32, #blocked1> -> tensor<1xf32, #blocked>
@@ -2044,3 +2045,17 @@ tt.func @upcast_mxfp(%arg0: tensor<32x32xi8, #ttg.dot_op<{opIdx = 0, parent = #m
 }
 
 }
+
+// -----
+
+#mma = #ttg.nvidia_mma<{versionMajor = 2, versionMinor = 0, warpsPerCTA = [1, 1], CTAsPerCGA = [1, 1], CTASplitNum = [1, 1], CTAOrder = [0, 1], instrShape = [16, 8]}>
+#dot_operand = #ttg.dot_op<{opIdx=0, parent=#mma, kWidth=4}>
+module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 1 : i32, "ttg.threads-per-warp" = 32 : i32} {
+  tt.func @f16_to_f8_dot_operand(%f16_inp: tensor<32x32xf16, #dot_operand>) {
+    // CHECK-LABEL: @f16_to_f8_dot_operand
+
+    %f8 = tt.fp_to_fp %f16_inp, rounding = rtne : tensor<32x32xf16, #dot_operand> -> tensor<32x32xf8E5M2, #dot_operand>
+    tt.return
+  }
+}
+
