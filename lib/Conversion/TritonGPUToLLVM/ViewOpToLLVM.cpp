@@ -154,6 +154,19 @@ struct JoinOpConversion : public ConvertOpToLLVMPattern<JoinOp> {
         unpackLLElements(loc, adaptor.getRhs(), rewriter);
     assert(lhsVals.size() == rhsVals.size());
     SmallVector<Value> joinedVals;
+    if (isa<ElementwiseInlineAsmOp>(op.getLhs().getDefiningOp()) &&
+        resultTy.getElementTypeBitWidth() == 16) {
+      for (int i = 0; i < lhsVals.size(); i += 2) {
+        joinedVals.push_back(lhsVals[i]);
+        joinedVals.push_back(lhsVals[i + 1]);
+        joinedVals.push_back(rhsVals[i]);
+        joinedVals.push_back(rhsVals[i + 1]);
+      }
+      Value ret =
+          packLLElements(loc, typeConverter, joinedVals, rewriter, resultTy);
+      rewriter.replaceOp(op, ret);
+      return success();
+    }
     for (int i = 0; i < lhsVals.size(); i++) {
       joinedVals.push_back(lhsVals[i]);
       joinedVals.push_back(rhsVals[i]);
