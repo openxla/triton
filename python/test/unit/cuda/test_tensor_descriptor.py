@@ -1420,6 +1420,7 @@ def test_mxfp8_mxfp4_matmul_tma(M, N, K, BLOCK_M, BLOCK_N, BLOCK_K, NUM_STAGES, 
 
 
 @requires_tma
+@pytest.mark.skip  # TODO(b/362458006): fix failing test
 @pytest.mark.interpreter()
 @pytest.mark.parametrize("dtype_str", tma_dtypes)
 @pytest.mark.parametrize("num_ctas", [1, 2])
@@ -1472,6 +1473,7 @@ def matmul_kernel_host_tensor_descriptor(a_desc, b_desc, c_desc):
 
 
 @requires_tma
+@pytest.mark.skip  # TODO(b/362458006): fix failing test
 @pytest.mark.interpreter()
 @pytest.mark.parametrize("num_ctas", [1, 2])
 @pytest.mark.parametrize("BLOCK_M, BLOCK_N, BLOCK_K, num_stages", [

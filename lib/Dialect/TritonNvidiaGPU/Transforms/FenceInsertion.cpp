@@ -39,6 +39,7 @@ public:
     if (computeCapability < 90)
       return;
     ModuleOp mod = getOperation();
+    DenseSet<std::pair<Operation *, unsigned>> trace;
     mod.walk([&](Operation *op) {
       bool isMMAv3 = isa<ttng::WarpGroupDotOp>(op);
       if (!isMMAv3 && !isa<ttng::MMAv5OpInterface>(op))
@@ -52,8 +53,8 @@ public:
         if (!mmaEncoding || !mmaEncoding.isHopper())
           return WalkResult::advance();
       }
-      bool aDependsOnShared = dependOnSharedEncOperand(a);
-      bool bDependsOnShared = dependOnSharedEncOperand(b);
+      bool aDependsOnShared = dependOnSharedEncOperand(a, trace);
+      bool bDependsOnShared = dependOnSharedEncOperand(b, trace);
       if (!aDependsOnShared && !bDependsOnShared)
         return WalkResult::advance();
       Operation *fence = builder.create<ttng::FenceAsyncSharedOp>(
@@ -74,8 +75,7 @@ public:
   }
 
 private:
-  bool dependOnSharedEncOperand(Value operand) {
-    static DenseSet<std::pair<Operation *, unsigned>> trace;
+  bool dependOnSharedEncOperand(Value operand, DenseSet<std::pair<Operation *, unsigned>> &trace) {
     auto op = operand.getDefiningOp();
     // avoid redundant insertion
     if (op && isa<mlir::triton::DotOpInterface>(op))
@@ -90,7 +90,7 @@ private:
     // op and not BlockArgument
     if (op && !isa<BlockArgument>(operand)) {
       for (auto v : op->getOperands()) {
-        if (dependOnSharedEncOperand(v))
+        if (dependOnSharedEncOperand(v, trace))
           return true;
       }
     }
@@ -105,7 +105,7 @@ private:
         auto iterOperands = forOp.getInitArgs();
         if (argNum == 0)
           return false;
-        if (dependOnSharedEncOperand(iterOperands[argNum - 1]))
+        if (dependOnSharedEncOperand(iterOperands[argNum - 1], trace))
           return true;
         // yield
         auto yieldOp = forOp.getBody()->getTerminator();
@@ -118,7 +118,7 @@ private:
         else
           trace.insert(entry);
 
-        if (dependOnSharedEncOperand(v))
+        if (dependOnSharedEncOperand(v, trace))
           return true;
       } else if (auto whileOp = dyn_cast<scf::WhileOp>(argOwner)) {
         assert(false && "FenceInsertionPass does not supported WhileOp");
