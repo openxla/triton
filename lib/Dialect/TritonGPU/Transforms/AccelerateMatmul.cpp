@@ -240,10 +240,23 @@ getWarpsPerTile(DotOp dotOp, const ArrayRef<int64_t> shape, int version,
 }
 
 static bool bwdFilter(Operation *op) {
+  // Dot operand layout assignment to Predicates are not currently supported
+  // during lowering from TritonGPU to LLVM in Triton for MMA cases. This
+  // condition limits visibility of the original bit-width so that predicate
+  // are not considered, hence, kwidth can never be = 32.
+  if (isa<arith::UIToFPOp>(op)) {
+    Type srcType = getElementTypeOrSelf(op->getOperand(0));
+    if (srcType.isInteger(1))
+      return false;
+  }
+
+  // b/405045790: We don't want to propagate through the BroadcastOp because we
+  // probably don't care about the load before a broadcast as it would likely be
+  // small. This is just a heuristic to avoid a regression.
   return (op->hasTrait<OpTrait::Elementwise>() && isMemoryEffectFree(op)) ||
          isView(op) ||
-         isa<Fp4ToFpOp, LoadOp, DescriptorLoadOp, BroadcastOp, ConvertLayoutOp>(
-             op);
+         isa<Fp4ToFpOp, LoadOp, DescriptorLoadOp, /*BroadcastOp,*/
+             ConvertLayoutOp>(op);
 }
 
 // Finds the bitwidth with which the value x is loaded
