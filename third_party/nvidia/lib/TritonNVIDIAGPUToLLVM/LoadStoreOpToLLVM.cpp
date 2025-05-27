@@ -1184,6 +1184,11 @@ struct AsyncCopyGlobalToLocalOpConversion
     //     mask bits are the same.  For example if N=2, the mask must be
     //     [x, x, y, y, ...].
     unsigned maxVec = getContiguity(op.getSrc());
+
+    if (resElemTy.isF16() && maxVec == 1) {
+      maxVec = 2;
+    }
+
     if (mask) {
       maxVec = std::min(maxVec, getMaskAlignment(mask));
     }
