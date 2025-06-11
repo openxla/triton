@@ -219,7 +219,8 @@ static bool rematerializeOp(Operation *op, DataPartitionScheme &partitionScheme,
     SetVector<Operation *> slice;
     BackwardSliceOptions opt;
     opt.omitBlockArguments = true;
-    getBackwardSlice(op, &slice);
+    auto result = getBackwardSlice(op, &slice);
+    assert(result.succeeded() && "expected a backward slice");
     for (auto depOp : slice)
       partitionScheme.undoPartition(depOp);
     return true;

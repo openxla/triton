@@ -197,7 +197,8 @@ static void threadValuesThroughWait(ttng::WarpGroupDotWaitOp wait,
       return op->getBlock() == wait->getBlock();
     };
     SetVector<Operation *> slice;
-    getBackwardSlice(v, &slice, options);
+    auto result = getBackwardSlice(v, &slice, options);
+    assert(result.succeeded() && "expected a backward slice");
   }
 
   for (ttng::WarpGroupDotOp dot : asyncDots) {

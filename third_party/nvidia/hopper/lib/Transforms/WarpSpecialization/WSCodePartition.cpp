@@ -479,7 +479,8 @@ void reorderProducerOps(SmallVector<Channel *> &channels) {
       BackwardSliceOptions opt;
       opt.omitBlockArguments = true;
       SetVector<Operation *> backwardSlice;
-      getBackwardSlice(channel->getSrcOp(), &backwardSlice, opt);
+      auto result = getBackwardSlice(channel->getSrcOp(), &backwardSlice, opt);
+      assert(result.succeeded() && "expected a backward slice");
       for (auto &op : backwardSlice) {
         if (op->getBlock() == block)
           op->moveBefore(channel->getSrcOp());

@@ -498,7 +498,11 @@ scf::ForOp lowerLoads(scf::ForOp forOp, CoarseSchedule &schedule) {
       // bytes)
       int copyVecBytes = getCopyVecBytes(
           cast<RankedTensorType>(op.getResultTypes()[0]), sharedEncoding);
-      if (copyVecBytes >= 4 || isTMALoad(&op)) {
+      bool is16BitElementOnBlackwell =
+          (cast<RankedTensorType>(op.getResultTypes()[0])
+               .getElementTypeBitWidth() == 16) &&
+          getNVIDIAComputeCapability(forOp->getParentOfType<ModuleOp>()) >= 100;
+      if ((copyVecBytes >= 4 && !is16BitElementOnBlackwell) || isTMALoad(&op)) {
         if (loadRequiresAdditionalBuffer(&op)) {
           // Allocate additional buffer required by the wgmma pipelining.
           stageDiff += 1;
