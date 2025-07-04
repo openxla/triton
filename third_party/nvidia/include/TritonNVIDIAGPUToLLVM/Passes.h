@@ -19,9 +19,11 @@ namespace triton {
 
 std::unique_ptr<OperationPass<ModuleOp>> createConvertTritonGPUToLLVMPass();
 std::unique_ptr<OperationPass<ModuleOp>>
-createConvertTritonGPUToLLVMPass(int32_t computeCapability);
+createConvertTritonGPUToLLVMPass(int32_t computeCapability,
+                                 SymbolTableCollection *symbolTables);
 std::unique_ptr<OperationPass<ModuleOp>>
-createConvertTritonGPUToLLVMPass(int32_t computeCapability, int32_t ptxVersion);
+createConvertTritonGPUToLLVMPass(int32_t computeCapability, int32_t ptxVersion,
+                                 SymbolTableCollection *symbolTables);
 
 #define GEN_PASS_REGISTRATION
 #include "nvidia/include/TritonNVIDIAGPUToLLVM/Passes.h.inc"

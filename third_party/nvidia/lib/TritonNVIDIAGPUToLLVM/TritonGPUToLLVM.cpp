@@ -71,10 +71,14 @@ struct ConvertTritonGPUToLLVM
     : public triton::impl::ConvertTritonGPUToLLVMBase<ConvertTritonGPUToLLVM> {
   using ConvertTritonGPUToLLVMBase::ConvertTritonGPUToLLVMBase;
 
-  ConvertTritonGPUToLLVM(int32_t computeCapability)
-      : ConvertTritonGPUToLLVMBase({computeCapability}) {}
-  ConvertTritonGPUToLLVM(int32_t computeCapability, int32_t ptxVersion)
-      : ConvertTritonGPUToLLVMBase({computeCapability, ptxVersion}) {}
+  ConvertTritonGPUToLLVM(int32_t computeCapability,
+                         SymbolTableCollection *symbolTables)
+      : ConvertTritonGPUToLLVMBase({computeCapability}),
+        symbolTables(symbolTables) {}
+  ConvertTritonGPUToLLVM(int32_t computeCapability, int32_t ptxVersion,
+                         SymbolTableCollection *symbolTables)
+      : ConvertTritonGPUToLLVMBase({computeCapability, ptxVersion}),
+        symbolTables(symbolTables) {}
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
@@ -94,7 +98,8 @@ struct ConvertTritonGPUToLLVM
     TritonLLVMFunctionConversionTarget funcTarget(*context);
     RewritePatternSet funcPatterns(context);
     mlir::triton::populateFuncOpConversionPattern(
-        typeConverter, funcPatterns, targetInfo, patternBenefitDefault);
+        typeConverter, funcPatterns, targetInfo, patternBenefitDefault,
+        symbolTables);
     if (failed(
             applyPartialConversion(mod, funcTarget, std::move(funcPatterns))))
       return signalPassFailure();
@@ -217,6 +222,8 @@ private:
         // Add ROCm support.
         static_cast<unsigned>(NVVM::NVVMMemorySpace::kSharedMemorySpace));
   }
+  // Store a pointer to the single, pass-wide symbol table
+  SymbolTableCollection *symbolTables;
 };
 
 } // anonymous namespace
@@ -228,14 +235,17 @@ std::unique_ptr<OperationPass<ModuleOp>> createConvertTritonGPUToLLVMPass() {
   return std::make_unique<ConvertTritonGPUToLLVM>();
 }
 std::unique_ptr<OperationPass<ModuleOp>>
-createConvertTritonGPUToLLVMPass(int32_t computeCapability) {
-  return std::make_unique<ConvertTritonGPUToLLVM>(computeCapability);
+createConvertTritonGPUToLLVMPass(int32_t computeCapability,
+                                 SymbolTableCollection *symbolTables) {
+  return std::make_unique<ConvertTritonGPUToLLVM>(computeCapability,
+                                                  symbolTables);
 }
 std::unique_ptr<OperationPass<ModuleOp>>
 createConvertTritonGPUToLLVMPass(int32_t computeCapability,
-                                 int32_t ptxVersion) {
+                                 int32_t ptxVersion,
+                                 SymbolTableCollection *symbolTables) {
   return std::make_unique<ConvertTritonGPUToLLVM>(computeCapability,
-                                                  ptxVersion);
+                                                  ptxVersion, symbolTables);
 }
 
 bool NVIDIA::canSkipBarSync(Operation *before, Operation *after) {
