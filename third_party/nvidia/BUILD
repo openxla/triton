@@ -1,4 +1,4 @@
-load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 # copybara:uncomment load("@pybind11_bazel//:build_defs.bzl", "pybind_library")
 

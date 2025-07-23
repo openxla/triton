@@ -1,4 +1,4 @@
-load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
 # copybara:uncomment load("//tools/build_defs/license:license.bzl", "license")
 
 package(

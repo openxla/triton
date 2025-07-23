@@ -1,7 +1,7 @@
 # NOTE: Do not depend on any targets from this directory,
 # but use //third_party/py/triton instead.
 
-load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(

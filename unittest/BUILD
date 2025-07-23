@@ -1,4 +1,4 @@
-load("//third_party/bazel_rules/rules_cc/cc:cc_test.bzl", "cc_test")
+# load("@rules_cc//cc:cc_test.bzl", "cc_test")
 load("//tools/build_defs/build_test:build_test.bzl", "build_test")
 
 package(

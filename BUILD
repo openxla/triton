@@ -3,8 +3,8 @@
 # There is no SLA associated with this package and it may get broken by LLVM
 # imports at any time.
 
-load("//third_party/bazel_rules/rules_cc/cc:cc_binary.bzl", "cc_binary")
-load("//third_party/bazel_rules/rules_cc/cc:cc_library.bzl", "cc_library")
+# load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+# load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 # copybara:uncomment load("//tools/build_defs/license:license.bzl", "license")
 
