@@ -26,6 +26,8 @@ struct AllocateSharedMemoryNv
           AllocateSharedMemoryNv> {
   using AllocateSharedMemoryNvBase::AllocateSharedMemoryNvBase;
 
+  AllocateSharedMemoryNv(int32_t computeCapability)
+      : AllocateSharedMemoryNvBase({computeCapability}) {}
   AllocateSharedMemoryNv(int32_t computeCapability, int32_t ptxVersion)
       : AllocateSharedMemoryNvBase({computeCapability, ptxVersion}) {}
 
@@ -77,6 +79,10 @@ getNvidiaAllocationAnalysisScratchSizeFn(TargetInfoBase &targetInfo) {
 } // namespace mlir::triton::nvidia_gpu
 
 namespace mlir::triton {
+std::unique_ptr<OperationPass<ModuleOp>>
+createAllocateSharedMemoryNvPass(int32_t computeCapability) {
+  return std::make_unique<AllocateSharedMemoryNv>(computeCapability);
+}
 std::unique_ptr<OperationPass<ModuleOp>>
 createAllocateSharedMemoryNvPass(int32_t computeCapability,
                                  int32_t ptxVersion) {

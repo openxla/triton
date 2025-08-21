@@ -1,4 +1,5 @@
 #include "Utility.h"
+
 #include "Dialect/NVGPU/IR/Dialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "triton/Conversion/TritonGPUToLLVM/TypeConverter.h"
@@ -11,7 +12,7 @@ namespace LLVM {
 namespace NVIDIA {
 using namespace mlir::triton;
 
-static Value shuffleCommonImpl(Location loc, RewriterBase &rewriter, Value val,
+static Value shuffleCommonImpl(Location loc, RewriterBase& rewriter, Value val,
                                Value i, NVVM::ShflKind mode, Value clamp) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   unsigned bits = val.getType().getIntOrFloatBitWidth();
@@ -31,57 +32,53 @@ static Value shuffleCommonImpl(Location loc, RewriterBase &rewriter, Value val,
   Type type = val.getType();
   if (type != i32_ty) {
     val = b.bitcast(val, int_ty(bits));
-    if (bits < 32)
-      val = b.zext(i32_ty, val);
+    if (bits < 32) val = b.zext(i32_ty, val);
   }
   Value mask = b.i32_val(0xFFFFFFFF);
   Value result = rewriter.create<NVVM::ShflOp>(loc, i32_ty, mask, val, i, clamp,
                                                mode, UnitAttr());
   if (type != i32_ty) {
-    if (bits < 32)
-      result = b.trunc(int_ty(bits), result);
+    if (bits < 32) result = b.trunc(int_ty(bits), result);
     result = b.bitcast(result, type);
   }
   return result;
 }
 
-static Value shuffleCommon(Location loc, RewriterBase &rewriter, Value val,
+static Value shuffleCommon(Location loc, RewriterBase& rewriter, Value val,
                            Value i, NVVM::ShflKind mode, Value clamp) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   // To shuffle pointers, convert them to i64.
   Type valTy = val.getType();
-  if (isa<LLVM::LLVMPointerType>(valTy))
-    val = b.ptrtoint(i64_ty, val);
+  if (isa<LLVM::LLVMPointerType>(valTy)) val = b.ptrtoint(i64_ty, val);
   Value result = shuffleCommonImpl(loc, rewriter, val, i, mode, clamp);
-  if (isa<LLVM::LLVMPointerType>(valTy))
-    result = b.inttoptr(valTy, result);
+  if (isa<LLVM::LLVMPointerType>(valTy)) result = b.inttoptr(valTy, result);
   return result;
 }
 
-Value shuffleXor(Location loc, RewriterBase &rewriter, Value val, int i) {
+Value shuffleXor(Location loc, RewriterBase& rewriter, Value val, int i) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   return shuffleCommon(loc, rewriter, val, b.i32_val(i), NVVM::ShflKind::bfly,
                        b.i32_val(0x1f));
 }
 
-Value shuffleUp(Location loc, RewriterBase &rewriter, Value val, int i) {
+Value shuffleUp(Location loc, RewriterBase& rewriter, Value val, int i) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   return shuffleCommon(loc, rewriter, val, b.i32_val(i), NVVM::ShflKind::up,
                        b.i32_val(0x0));
 }
 
-Value shuffleIdx(Location loc, RewriterBase &rewriter, Value val, int i) {
+Value shuffleIdx(Location loc, RewriterBase& rewriter, Value val, int i) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   return shuffleIdx(loc, rewriter, val, b.i32_val(i));
 }
 
-Value shuffleIdx(Location loc, RewriterBase &rewriter, Value val, Value i) {
+Value shuffleIdx(Location loc, RewriterBase& rewriter, Value val, Value i) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   return shuffleCommon(loc, rewriter, val, i, NVVM::ShflKind::idx,
                        b.i32_val(0x1f));
 }
 
-Value llGetPid(Location loc, RewriterBase &rewriter, ModuleOp moduleOp,
+Value llGetPid(Location loc, RewriterBase& rewriter, ModuleOp moduleOp,
                int axis) {
   assert(axis >= 0);
   assert(axis < 3);
@@ -94,11 +91,11 @@ Value llGetPid(Location loc, RewriterBase &rewriter, ModuleOp moduleOp,
   int numCTAs = triton::gpu::TritonGPUDialect::getNumCTAs(moduleOp);
 
   std::string sreg = numCTAs == 1 ? "ctaid." : "clusterid.";
-  sreg.append(1, 'x' + axis); // 0 -> 'x', 1 -> 'y', 2 -> 'z'
+  sreg.append(1, 'x' + axis);  // 0 -> 'x', 1 -> 'y', 2 -> 'z'
   return getSRegValue(rewriter, loc, sreg);
 }
 
-Value getSRegValue(OpBuilder &rewriter, Location loc, StringRef sRegStr) {
+Value getSRegValue(OpBuilder& rewriter, Location loc, StringRef sRegStr) {
   ValueRange args;
   auto intrName = Twine("llvm.nvvm.read.ptx.sreg.") + sRegStr;
   auto callOp =
@@ -106,7 +103,7 @@ Value getSRegValue(OpBuilder &rewriter, Location loc, StringRef sRegStr) {
   return callOp.getResult(0);
 }
 
-Value permute(Location loc, RewriterBase &rewriter, Value a, Value b,
+Value permute(Location loc, RewriterBase& rewriter, Value a, Value b,
               Value mask) {
   Value args[] = {a, b, mask};
   auto op =
@@ -115,11 +112,12 @@ Value permute(Location loc, RewriterBase &rewriter, Value a, Value b,
 }
 
 /// Create a predicate with just single active thread.
-Value createElectPredicate(Location loc, RewriterBase &rewriter) {
-  return rewriter.create<NVVM::ElectSyncOp>(loc, i1_ty);
+Value createElectPredicate(Location loc, RewriterBase& rewriter) {
+  Value memberMask;  // default-constructed = null Value
+  return rewriter.create<NVVM::ElectSyncOp>(loc, i1_ty, memberMask);
 }
 
-void createSyncWarp(Location loc, OpBuilder &rewriter) {
+void createSyncWarp(Location loc, OpBuilder& rewriter) {
   TritonLLVMOpBuilder b(loc, rewriter);
   Type resultTy = void_ty(rewriter.getContext());
   Value args[] = {b.i32_val(0xffffffff)};
@@ -127,7 +125,7 @@ void createSyncWarp(Location loc, OpBuilder &rewriter) {
                             args);
 }
 
-Value createElectPredicateWarp0(Location loc, RewriterBase &rewriter) {
+Value createElectPredicateWarp0(Location loc, RewriterBase& rewriter) {
   auto b = TritonLLVMOpBuilder(loc, rewriter);
   Value warpId = getLaneAndWarpId(rewriter, loc).second;
   Value warp0 = b.icmp_eq(warpId, b.i32_val(0));
@@ -136,20 +134,18 @@ Value createElectPredicateWarp0(Location loc, RewriterBase &rewriter) {
 
 LogicalResult lowerLdStMatrix(
     Location loc, LinearLayout cvt, bool transpose,
-    SmallVector<Value> &vals, // Input for stmatrix, output for ldmatrix
+    SmallVector<Value>& vals,  // Input for stmatrix, output for ldmatrix
     Value smemBase, Value affineOffset, uint64_t maskSpanAffineOffset,
-    Type llvmElemTy, ConversionPatternRewriter &rewriter,
-    const ::triton::NVIDIA::TargetInfo &targetInfo) {
+    Type llvmElemTy, ConversionPatternRewriter& rewriter,
+    const ::triton::NVIDIA::TargetInfo& targetInfo) {
   // Lower load via ldmatrix, store via stmatrix
 
   bool isStore = !vals.empty();
-  if (isStore && !targetInfo.supportStMatrix())
-    return failure();
-  if (!isStore && !targetInfo.supportLdMatrix())
-    return failure();
+  if (isStore && !targetInfo.supportStMatrix()) return failure();
+  if (!isStore && !targetInfo.supportLdMatrix()) return failure();
 
   auto b = TritonLLVMOpBuilder(loc, rewriter);
-  auto *ctx = rewriter.getContext();
+  auto* ctx = rewriter.getContext();
 
   auto S = [ctx](StringRef v) { return StringAttr::get(ctx, v); };
   auto kReg = S("register");
@@ -166,8 +162,7 @@ LogicalResult lowerLdStMatrix(
   if ((!transpose && bitwidth > 32) || (transpose && bitwidth != 16))
     return failure();
   // Inter block stmatrix is not supported
-  if (cvt.hasInDim(kBlock))
-    return failure();
+  if (cvt.hasInDim(kBlock)) return failure();
 
   // We must have at least 32-bits worth of registers to use these instructions
   if (transpose && cvt.getInDimSizeLog2(kReg) < llvm::Log2_32(32 / bitwidth)) {
@@ -214,10 +209,9 @@ LogicalResult lowerLdStMatrix(
 
     // In particular, offsets lanes 4, 8, 16 map to offsets 1, 2, 4...
     auto bases = cvt.getBases();
-    auto &laneBases = bases[kLane];
+    auto& laneBases = bases[kLane];
     for (int i = 0; i < 3; ++i) {
-      if (laneBases[i + 2][0] != (1 << i))
-        return failure();
+      if (laneBases[i + 2][0] != (1 << i)) return failure();
       laneBases[i + 2][0] = 0;
     }
     // ... and no other basis should depend on 1, 2, 4
@@ -225,8 +219,7 @@ LogicalResult lowerLdStMatrix(
     // translated it to checking that the matrix to the left of A is all zeros
     for (auto dim : cvt.getInDimNames()) {
       for (auto basis : bases[dim]) {
-        if (basis[0] & 0b111)
-          return failure();
+        if (basis[0] & 0b111) return failure();
       }
     }
 
@@ -244,8 +237,8 @@ LogicalResult lowerLdStMatrix(
   // Choose up to 4 packs of 32-bit elements indexed by the next (at most) two
   // bases as the vectorisation factor. We don't consider the basis of the tile
   // for vectorisation so we substract them
-  auto vec = std::min<int32_t>(2, reps.getInDimSizeLog2(kReg) -
-                                      llvm::Log2_32(32 / bitwidth));
+  auto vec = std::min<int32_t>(
+      2, reps.getInDimSizeLog2(kReg) - llvm::Log2_32(32 / bitwidth));
 
   // Map from kReg, kLane, kWarp to beginning of each tile
   assert(reps.getOutDimSize(kOffset) == cvt.getOutDimSize(kOffset));
@@ -346,7 +339,10 @@ LogicalResult lowerLdStMatrix(
           }
           inputs.push_back(b.bitcast(input, i32_ty));
         }
-        rewriter.create<NVVM::StMatrixOp>(loc, vecAddr, inputs, layout);
+        auto shapeAttr = NVVM::LdStMatrixShapeAttr::get(ctx, /*m=*/8, /*n=*/8);
+        rewriter.create<NVVM::StMatrixOp>(loc, vecAddr, inputs, layout,
+                                          shapeAttr,
+                                          NVVM::LdStMatrixEltType::B16);
       } else {
         Type matTy = nVecs == 1
                          ? i32_ty
@@ -382,6 +378,6 @@ LogicalResult lowerLdStMatrix(
   }
   return success();
 }
-} // namespace NVIDIA
-} // namespace LLVM
-} // namespace mlir
+}  // namespace NVIDIA
+}  // namespace LLVM
+}  // namespace mlir

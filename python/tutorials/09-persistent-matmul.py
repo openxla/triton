@@ -31,7 +31,9 @@ from contextlib import contextmanager
 
 from typing import Optional
 
-if torch.cuda.is_available():
+# Attempts to dlopen cuBLAS, prevent this path
+# TODO: b/436154455 - Re-enable once we can link in cuBLAS properly
+if False and torch.cuda.is_available():
     from triton._C.libtriton import nvidia
     cublas_workspace = torch.empty(32 * 1024 * 1024, device="cuda", dtype=torch.uint8)
     cublas = nvidia.cublas.CublasLt(cublas_workspace)
@@ -620,11 +622,12 @@ def torch_matmul(a, b):
 
 @contextmanager
 def proton_context():
-    proton.activate(0)
+    # proton.activate(0)
     try:
         yield
     finally:
-        proton.deactivate(0)
+        # proton.deactivate(0)
+        pass
 
 
 def bench_fn(label, reps, warmup_reps, fn, *args):
@@ -735,9 +738,12 @@ if __name__ == "__main__":
         validate(32, 32, 32, dtype)
         validate(8192, 8192, args.K_range[0], dtype)
 
-        proton.start("matmul", hook="triton")
-        proton.deactivate()
+        # Proton tries to dlopen libcupti.so,
+        # If you want to profile this, run it under NCU
+        # TODO: b/436154452 - Re-enabled once this is fixed.
+        # proton.start("matmul", hook="triton")
+        # proton.deactivate()
         for K in range(args.K_range[0], args.K_range[1] + 1, args.K_step):
             bench(K, dtype)
-        proton.finalize()
-        show_profile(args.prec, "matmul")
+        # proton.finalize()
+        # show_profile(args.prec, "matmul")

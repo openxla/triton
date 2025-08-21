@@ -111,6 +111,6 @@ if __name__ == "__main__":
 
     if supports_pdl():
         validate(1024)
-        benchmark.run(print_data=True, show_plots=True, save_path=".")
+        benchmark.run(print_data=True, show_plots=True)
     else:
         print("PDL is not supported on this device")

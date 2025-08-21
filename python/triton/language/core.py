@@ -2784,7 +2784,7 @@ def gather(src, index, axis, _semantic=None):
 @builtin
 def map_elementwise(
     scalar_fn: Callable[..., Tuple[tensor, ...]],
-    *args: tensor,
+    *args: any,
     pack=1,
     _semantic=None,
     _generator=None,

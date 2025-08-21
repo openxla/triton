@@ -7,7 +7,10 @@ import triton.language as tl
 from triton._internal_testing import is_hip, is_hopper, is_blackwell
 from triton.tools.tensor_descriptor import TensorDescriptor
 
-if not is_hip() and torch.cuda.is_available() and torch.cuda.get_device_capability()[0] in [9, 10]:
+# Attempts to dlopen cuBLAS, prevent this path
+# TODO: b/436154455 - Re-enable once we can link in cuBLAS properly
+# if not is_hip() and torch.cuda.is_available() and torch.cuda.get_device_capability()[0] in [9, 10]:
+if False:
     from triton._C.libtriton import nvidia
     cublas_workspace = torch.empty(32 * 1024 * 1024, device="cuda", dtype=torch.uint8)
     cublas = nvidia.cublas.CublasLt(cublas_workspace)
@@ -285,9 +288,11 @@ def test_warp_specialize_tma_matmul(M, N, K, BLOCK_SIZE_M, BLOCK_SIZE_N, BLOCK_S
     else:
         assert "ttg.warp_specialize" in ttgir
 
-    ref_out = torch.empty((M, N), dtype=dtype, device=device)
-    cublas.matmul(A, B, ref_out)
-    torch.testing.assert_close(ref_out.to(torch.float16), C.to(torch.float16), atol=0.03, rtol=0.03)
+    # TODO: b/436154455 - Re-enable once we can link in cuBLAS properly
+    if cublas is not None:
+        ref_out = torch.empty((M, N), dtype=dtype, device=device)
+        cublas.matmul(A, B, ref_out)
+        torch.testing.assert_close(ref_out.to(torch.float16), C.to(torch.float16), atol=0.03, rtol=0.03)
 
 
 @triton.jit
@@ -386,9 +391,11 @@ def test_warp_specialize_tma_matmul_persistent(M, N, K, BLOCK_SIZE_M, BLOCK_SIZE
     else:
         assert "ttg.warp_specialize" in ttgir
 
-    ref_out = torch.empty((M, N), dtype=dtype, device=device)
-    cublas.matmul(A, B, ref_out)
-    torch.testing.assert_close(ref_out.to(torch.float16), C.to(torch.float16), atol=0.03, rtol=0.03)
+    # TODO: b/436154455 - Re-enable once we can link in cuBLAS properly
+    if cublas is not None:
+        ref_out = torch.empty((M, N), dtype=dtype, device=device)
+        cublas.matmul(A, B, ref_out)
+        torch.testing.assert_close(ref_out.to(torch.float16), C.to(torch.float16), atol=0.03, rtol=0.03)
 
 
 @triton.jit

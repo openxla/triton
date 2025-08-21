@@ -323,10 +323,10 @@ def bench_block_scaled(K, block_scale_type="nvfp4", reps=10):
         M, N, K, block_scale_type, compute_reference=False)
     _ = block_scaled_matmul(a_desc, a_scale, b_desc, b_scale, torch.float16, M, N, K, rep_m, rep_n, rep_k, configs)
 
-    proton.activate(0)
+    # proton.activate(0)
     for _ in range(reps):
         _ = block_scaled_matmul(a_desc, a_scale, b_desc, b_scale, torch.float16, M, N, K, rep_m, rep_n, rep_k, configs)
-    proton.deactivate(0)
+    # proton.deactivate(0)
     print("Done benchmarking")
 
 
@@ -361,9 +361,12 @@ if __name__ == "__main__":
         validate_block_scaled(8192, 8192, 8192, block_scale_type=args.format)
 
         if args.bench:
-            proton.start("block_scaled_matmul", hook="triton")
-            proton.deactivate(0)  # Skip argument creation
+            # Proton tries to dlopen libcupti.so,
+            # If you want to profile this, run it under NCU
+            # TODO: b/436154452 - Re-enabled once this is fixed.
+            # proton.start("block_scaled_matmul", hook="triton")
+            # proton.deactivate(0)  # Skip argument creation
             for K in range(args.K_range[0], args.K_range[1] + 1, args.K_step):
                 bench_block_scaled(K, reps=10000, block_scale_type=args.format)
-            proton.finalize()
-            show_profile("block_scaled_matmul")
+            # proton.finalize()
+            # show_profile("block_scaled_matmul")
