@@ -524,8 +524,24 @@ cc_library(
 
 cc_library(
     name = "TritonTransforms",
-    srcs = glob(["lib/Dialect/Triton/Transforms/*.cpp"]),
-    hdrs = glob(["include/triton/Dialect/Triton/Transforms/*.h"]),
+    srcs = glob(
+        include = [
+            "lib/Dialect/Triton/Transforms/*.cpp",
+        ],
+        exclude = [
+            # Included in TritonGPUTransforms to avoid circular dependency
+            "lib/Dialect/Triton/Transforms/LoopPeeling.cpp",
+        ],
+    ),
+    hdrs = glob(
+        include = [
+            "include/triton/Dialect/Triton/Transforms/*.h",
+        ],
+        exclude = [
+            # Included in TritonGPUTransforms to avoid circular dependency
+            "include/triton/Dialect/Triton/Transforms/LoopPeeling.h",
+        ],
+    ),
     copts = _no_unused_variable,
     deps = [
         ":TritonDialects",
@@ -594,7 +610,7 @@ cc_library(
 cc_library(
     name = "TritonGPUTransforms",
     srcs = glob(
-        [
+        include = [
             "lib/Dialect/TritonGPU/Transforms/*.cpp",
             "lib/Dialect/TritonGPU/Transforms/*.h",
             "lib/Dialect/TritonGPU/Transforms/Pipeliner/*.cpp",
@@ -604,17 +620,22 @@ cc_library(
             "lib/Dialect/TritonGPU/Transforms/Utility.cpp",
         ],
     ) + [
-        # TritonTransforms target depends on TritonGPUTransforms.
-        # But some files in TritonGPUTransforms depend on the headers in TritonTransforms.
-        # So we need to include them here to avoid circular dependency.
-        "include/triton/Dialect/Triton/Transforms/LoopPeeling.h",
+        # TritonTransforms target depends on TritonGPUTransforms. But some files
+        # in TritonGPUTransforms depend on the headers in TritonTransforms, so
+        # we need to include them here to avoid circular dependency.
+        "lib/Dialect/Triton/Transforms/LoopPeeling.cpp",
     ],
     hdrs = glob(
-        [
+        include = [
             "include/triton/Dialect/TritonGPU/Transforms/*.h",
         ],
         exclude = ["include/triton/Dialect/TritonGPU/Transforms/Utility.h"],
-    ),
+    ) + [
+        # TritonTransforms target depends on TritonGPUTransforms. But some files
+        # in TritonGPUTransforms depend on the headers in TritonTransforms, so
+        # we need to include them here to avoid circular dependency.
+        "include/triton/Dialect/Triton/Transforms/LoopPeeling.h",
+    ],
     copts = select({
         ":compiler_is_msvc": [],
         "//conditions:default": [
@@ -809,7 +830,7 @@ cc_library(
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
         "@llvm-project//mlir:UBDialect",
-        "@triton//third_party/proton:ProtonIRDialect",
+        "@triton//third_party/proton:ProtonIR",
     ],
 )
 
@@ -955,6 +976,7 @@ cc_library(
         ":triton_nvidia_gpu_transforms_inc_gen",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:RegisterAllPasses",
+        "@triton//test:ProtonTestTransforms",
         "@triton//test:TritonTestAnalysis",
         "@triton//test:TritonTestDialect",
         "@triton//third_party/amd:TritonAMDGPU",
@@ -966,7 +988,10 @@ cc_library(
         "@triton//third_party/nvidia:NVWSDialect",
         "@triton//third_party/nvidia:NVWSTransforms",
         "@triton//third_party/nvidia:TritonNVIDIAGPUToLLVM",
-        "@triton//third_party/proton:ProtonIRDialect",
+        "@triton//third_party/proton:ProtonGPUToLLVM",
+        "@triton//third_party/proton:ProtonGPUTransforms",
+        "@triton//third_party/proton:ProtonIR",
+        "@triton//third_party/proton:ProtonToProtonGPU",
     ],
 )
 
@@ -979,10 +1004,11 @@ cc_binary(
         ":AllPassesAndDialects",
         "@llvm-project//mlir:MlirOptLib",
         "@triton//third_party/amd:TestAMDAnalysis",
-        #copybara:comment_begin
-        "//base",
-        "//util/debuginfo:signalsafe_addr2line_installer",  # fixdeps: keep
-        #copybara:comment_end
+        "@triton//third_party/proton:ProtonIR",
+        # copybara:uncomment_begin
+        # "//base",
+        # "//util/debuginfo:signalsafe_addr2line_installer",  # fixdeps: keep
+        # copybara:uncomment_end
     ],
 )
 
@@ -1001,10 +1027,10 @@ cc_binary(
         "@llvm-project//llvm:Passes",
         "@llvm-project//llvm:Support",
         "@llvm-project//llvm:TargetParser",
-        #copybara:comment_begin
-        "//base",
-        "//util/debuginfo:signalsafe_addr2line_installer",  # fixdeps: keep
-        #copybara:comment_end
+        # copybara:uncomment_begin
+        # "//base",
+        # "//util/debuginfo:signalsafe_addr2line_installer",  # fixdeps: keep
+        # copybara:uncomment_end
     ],
 )
 
@@ -1031,10 +1057,10 @@ cc_binary(
         "@llvm-project//mlir:AsmParser",
         "@llvm-project//mlir:IR",
         "@triton//third_party/amd:TestAMDAnalysis",
-        #copybara:comment_begin
-        "//base",
-        "//util/debuginfo:signalsafe_addr2line_installer",  # fixdeps: keep
-        #copybara:comment_end
+        # copybara:uncomment_begin
+        # "//base",
+        # "//util/debuginfo:signalsafe_addr2line_installer",  # fixdeps: keep
+        # copybara:uncomment_end
     ],
 )
 

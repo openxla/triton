@@ -19,6 +19,11 @@ _requires_config_cuda = select(
     no_match_error = "Requires --config=cuda",
 )
 
+_asan_needs_extra_link_memory = select({
+    "//tools/cpp:asan_build": {"cpp_link.mem": "20g"},
+    "//conditions:default": None,
+})
+
 EXCLUDE_TESTS = [
     "backend/test_device_backend.py",  # we run backends differently in g3
     "unit/language/test_reproducer.py",  # this is not an actual test, but a tool for running reproducers
@@ -66,6 +71,7 @@ pytest_multi_tests(
         "unit/language/test_core.py",
         "unit/language/test_mxfp.py",
     ],
+    exec_properties = _asan_needs_extra_link_memory,
     name_suffix = "_a100",
     shard_count = 10,
     tags = _requires_gpu_sm80,
@@ -89,6 +95,7 @@ pytest_multi_tests(
         "unit/language/test_core.py",
         "unit/language/test_mxfp.py",
     ],
+    exec_properties = _asan_needs_extra_link_memory,
     name_suffix = "_h100",
     shard_count = 10,
     tags = _requires_gpu_sm90,
@@ -112,6 +119,7 @@ pytest_test(
     srcs = [
         "conftest.py",
     ],
+    exec_properties = _asan_needs_extra_link_memory,
     shard_count = 40,
     tags = _requires_gpu_sm90,
     target_compatible_with = _requires_config_cuda,
@@ -129,6 +137,7 @@ pytest_test(
     srcs = [
         "conftest.py",
     ],
+    exec_properties = _asan_needs_extra_link_memory,
     shard_count = 40,
     tags = _requires_gpu_sm80,
     target_compatible_with = _requires_config_cuda,
@@ -144,6 +153,7 @@ pytest_test(
     name = "unit/runtime/test_peer_access_h100_x2",
     size = "large",
     srcs = ["conftest.py"],
+    exec_properties = _asan_needs_extra_link_memory,
     tags = [
         "config-cuda-only",
         "requires-gpu-sm90:2",

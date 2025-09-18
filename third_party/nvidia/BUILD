@@ -30,7 +30,6 @@ package(
 #     srcs = [
 #         "triton_nvidia.cc",
 #     ],
-#     compatible_with = [],
 #     copts = ["-Wno-sometimes-uninitialized"],
 #     visibility = [
 #         "@triton//python:__subpackages__",
@@ -64,13 +63,10 @@ cc_library(
     hdrs = glob([
         "include/NVGPUToLLVM/*.h",
     ]),
-    # copybara:uncomment compatible_with = ["//buildenv/target:non_prod"],
-    copts = select({
-        "//conditions:default": [
-            "-Wno-unused-variable",
-            "-Wno-return-type",
-        ],
-    }),
+    copts = [
+        "-Wno-unused-variable",
+        "-Wno-return-type",
+    ],
     includes = [
         "..",
         "include",
@@ -109,13 +105,10 @@ cc_library(
         "lib/TritonNVIDIAGPUToLLVM/TargetInfo.h",
         "lib/TritonNVIDIAGPUToLLVM/Utility.h",
     ],
-    # copybara:uncomment compatible_with = ["//buildenv/target:non_prod"],
-    copts = select({
-        "//conditions:default": [
-            "-Wno-reorder-ctor",
-            "-Wno-unused-variable",
-        ],
-    }),
+    copts = [
+        "-Wno-reorder-ctor",
+        "-Wno-unused-variable",
+    ],
     includes = [
         "..",
         "include",
@@ -152,13 +145,11 @@ cc_library(
         "@triton//:TritonNvidiaGPUTransforms",
         "@triton//:TritonTools",
         "@triton//:triton_gpu_attr_inc_gen",
-        "@triton//third_party/proton:TritonProtonToLLVM",
     ],
 )
 
 gentbl_cc_library(
     name = "triton_conversion_nvgpu_to_llvm_passes_inc_gen",
-    # copybara:uncomment compatible_with = ["//buildenv/target:non_prod"],
     tbl_outs = {"include/NVGPUToLLVM/Passes.h.inc": [
         "--gen-pass-decls",
         "--name=NVGPUToLLVM",
@@ -170,7 +161,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "triton_conversion_triton_nvidia_gpu_to_llvm_passes_inc_gen",
-    # copybara:uncomment compatible_with = ["//buildenv/target:non_prod"],
     tbl_outs = {"include/TritonNVIDIAGPUToLLVM/Passes.h.inc": [
         "--gen-pass-decls",
         "--name=TritonNVIDIAGPUToLLVM",
@@ -336,7 +326,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "nvws_transforms_passes_inc_gen",
-    # copybara:uncomment compatible_with = ["//buildenv/target:non_prod"],
     tbl_outs = [
         (
             [
@@ -353,7 +342,6 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "nv_hopper_transforms_passes_inc_gen",
-    # copybara:uncomment compatible_with = ["//buildenv/target:non_prod"],
     tbl_outs = [
         (
             [
@@ -506,6 +494,7 @@ cc_library(
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
+        "@llvm-project//mlir:UBDialect",
         "@triton//:TritonDialects",
         "@triton//:TritonGPUTransforms",
     ],

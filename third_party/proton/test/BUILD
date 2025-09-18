@@ -16,9 +16,11 @@ pytest_multi_tests(
         exclude = [
             "test_viewer.py",  # Requires hatchet as dependency, which we do not have imported.
             "test_cmd.py",  # Tries to do filepath magic, would need patching to work in google3.
+            "test_override.py",  # Tries to do filepath magic, would need patching to work in google3.
             "test_profile.py",  # Needs to dlopen cupti, but we only have a static version of it.
             "test_api.py",  # Needs to dlopen cupti, but we only have a static version of it.
             "test_lib.py",  # Needs to dlopen cupti, but we only have a static version of it.
+            "test_instrumentation.py",  # Needs to dlopen cupti, but we only have a static version of it.
         ],
     ),
     deps = [

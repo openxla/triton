@@ -14,6 +14,7 @@ _requires_gpu_sm100 = [
     "config-cuda-only",
     "requires-gpu-sm100-full",
     "notap",  # Blackwell support is experimental on Forge and requires special flags.
+    "manual",  # Blackwell support is experimental on Forge and requires special flags.
 ]
 
 _requires_config_cuda = select(
@@ -110,7 +111,11 @@ py_test(
 py_test(
     name = "07-extern-functions",
     srcs = ["07-extern-functions.py"],
-    tags = _requires_gpu_sm90 + ["notap"],  # Can't find libdevice.10.bc
+    tags = _requires_gpu_sm90 + [
+        # Can't find libdevice.10.bc
+        "manual",
+        "notap",
+    ],
     target_compatible_with = _requires_config_cuda,
     deps = [
         "//third_party/py/torch:pytorch",

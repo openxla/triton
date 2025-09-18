@@ -6,6 +6,7 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(
     default_applicable_licenses = ["@triton//:license"],
+    default_compatible_with = ["//buildenv/target:non_prod"],
     default_visibility = [
         "//third_party/py/triton:__pkg__",
         "@triton//python:__subpackages__",
@@ -74,8 +75,9 @@ pybind_extension(
         "@triton//:TritonToTritonGPUPasses",
         "@triton//:TritonTools",
         "@triton//:TritonTransforms",
+        "@triton//third_party/amd:TritonAMDGPU",
         "@triton//third_party/nvidia:triton_nvidia",
-        "@triton//third_party/proton:ProtonIRDialect",
+        "@triton//third_party/proton:ProtonIR",
     ],
 )
 

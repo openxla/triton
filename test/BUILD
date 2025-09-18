@@ -78,7 +78,17 @@ cc_library(
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
         "@triton//:TritonDialects",
+        "@triton//:TritonGPUTransforms",
         "@triton//:TritonTransforms",
         "@triton//third_party/nvidia:TritonNVIDIAGPUToLLVM",
+    ],
+)
+
+cc_library(
+    name = "ProtonTestTransforms",
+    srcs = ["lib/Proton/TestScopeIdAllocation.cpp"],
+    deps = [
+        "@llvm-project//mlir:Pass",
+        "@triton//third_party/proton:ProtonAnalysis",
     ],
 )

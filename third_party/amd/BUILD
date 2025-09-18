@@ -171,7 +171,6 @@ cc_library(
         "@triton//:TritonDialects",
         "@triton//:TritonGPUToLLVM",
         "@triton//:TritonTools",
-        "@triton//third_party/proton:TritonProtonToLLVM",
     ],
 )
 
@@ -256,7 +255,7 @@ cc_library(
     name = "Analysis",
     srcs = glob(["lib/Analysis/*.cpp"]),
     hdrs = glob(["include/Analysis/*.h"]),
-    copts = select({
+    copts = _no_unused_variable + select({
         "@triton//:compiler_is_msvc": [],
         "//conditions:default": ["-Wno-implicit-fallthrough"],
     }),
