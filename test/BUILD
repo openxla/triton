@@ -6,7 +6,7 @@
 # 
 # package(
 #     default_applicable_licenses = ["@triton//:license"],
-#     default_compatible_with = ["# @build-target"],
+#     default_compatible_with = [# "@build-target"],
 #     default_visibility = ["@triton//:__subpackages__"],
 # )
 # 

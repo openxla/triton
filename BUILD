@@ -9,7 +9,7 @@ load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 package(
     # copybara:uncomment_begin
     # default_applicable_licenses = [":license"],
-    # default_compatible_with = ["# @build-target"],
+    # default_compatible_with = [# "@build-target"],
     # default_visibility = [
         # # Add your project here if you need to depend on Triton's C++ sources.
         # # Add a point of contact we can reach out to when needed in the comment.
@@ -1015,11 +1015,11 @@ cc_binary(
     ],
     deps = [
         ":AllPassesAndDialects",
-        "# @abseil-cpp//absl/base",
+        # "@abseil-cpp//absl/base",
         "@llvm-project//mlir:MlirOptLib",
         "@triton//third_party/amd:TestAMDAnalysis",
         "@triton//third_party/proton:ProtonIR",
-        "# @addr2line",  # fixdeps: keep
+        # "@addr2line",  # fixdeps: keep
     ],
 )
 
@@ -1031,7 +1031,7 @@ cc_binary(
     ],
     deps = [
         ":TritonLLVMIR",
-        "# @abseil-cpp//absl/base",
+        # "@abseil-cpp//absl/base",
         "@llvm-project//llvm:CodeGen",
         "@llvm-project//llvm:Core",
         "@llvm-project//llvm:IRReader",
@@ -1039,7 +1039,7 @@ cc_binary(
         "@llvm-project//llvm:Passes",
         "@llvm-project//llvm:Support",
         "@llvm-project//llvm:TargetParser",
-        "# @addr2line",  # fixdeps: keep
+        # "@addr2line",  # fixdeps: keep
     ],
 )
 
@@ -1062,12 +1062,12 @@ cc_binary(
     deps = [
         ":AllPassesAndDialects",
         ":TritonDialects",
-        "# @abseil-cpp//absl/base",
+        # "@abseil-cpp//absl/base",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:AsmParser",
         "@llvm-project//mlir:IR",
         "@triton//third_party/amd:TestAMDAnalysis",
-        "# @addr2line",  # fixdeps: keep
+        # "@addr2line",  # fixdeps: keep
     ],
 )
 

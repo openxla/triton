@@ -6,7 +6,7 @@ load("@pybind11_bazel//:build_defs.bzl", "pybind_extension")
 
 package(
     default_applicable_licenses = ["@triton//:license"],
-    default_compatible_with = ["# @build-target"],
+    default_compatible_with = [# "@build-target"],
     default_visibility = [
         "//third_party/py/triton:__pkg__",
         "@triton//python:__subpackages__",

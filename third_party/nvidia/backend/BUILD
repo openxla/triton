@@ -15,7 +15,7 @@ pybind_extension(
         "//third_party/py/triton:__subpackages__",
     ],
     deps = [
-        "# @libcuda",
+        # "@libcuda",
         "//third_party/absl/cleanup",
         "@local_config_cuda//cuda:cuda_headers",
         "@local_config_cuda//cuda:cuda_runtime",

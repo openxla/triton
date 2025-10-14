@@ -5,7 +5,7 @@ load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 package(
     # copybara:uncomment_begin
     # default_applicable_licenses = ["@triton//:license"],
-    # default_compatible_with = ["# @build-target"],
+    # default_compatible_with = [# "@build-target"],
     # default_visibility = [
         # "//third_party/tensorflow/compiler/xla/backends/gpu:__subpackages__",
         # "//third_party/tensorflow/compiler/xla/pjrt:__subpackages__",

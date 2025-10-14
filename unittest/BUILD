@@ -3,7 +3,7 @@ load("//tools/build_defs/build_test:build_test.bzl", "build_test")
 
 package(
     default_applicable_licenses = ["@triton//:license"],
-    default_compatible_with = ["# @build-target"],
+    default_compatible_with = [# "@build-target"],
     default_visibility = ["@triton//:__subpackages__"],
 )
 
