@@ -1,3 +1,5 @@
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LogicalResult.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Support/DebugStringHelper.h"
@@ -9,9 +11,8 @@
 #include "triton/Dialect/TritonGPU/IR/Types.h"
 #include "triton/Dialect/TritonGPU/Transforms/Utility.h"
 #include "triton/Dialect/TritonNvidiaGPU/IR/Dialect.h"
+#include "triton/Dialect/TritonNvidiaGPU/Transforms/TMAUtilities.h"
 #include "triton/Tools/LayoutUtils.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/LogicalResult.h"
 
 // Provide custom directive handlers for declarative assemblyFormat.
 // They must be visible before including the generated op classes.
@@ -573,11 +574,47 @@ LogicalResult MemDescReshapeOp::verify() {
   return OpTrait::impl::verifyEquivalentType(expectedTy, dstType);
 }
 
-static LogicalResult inferMemDescReshapeOpEncoding(ArrayRef<int64_t> srcShape,
+// Verification copied from nvmmaSharedToLinearLayout().
+LogicalResult verifyNVMMASharedEncoding(std::optional<Location> loc,
+                                        NVMMASharedEncodingAttr attr,
+                                        ArrayRef<int64_t> shape,
+                                        int elementBitWidth) {
+  if (attr.getSwizzlingByteWidth() == 0) return success();
+  if (shape.size() < 2)
+    return emitOptionalError(loc, "nvmma_shared encoding requires rank >= 2");
+
+  auto shapePerCTA = getShapePerCTA(attr, shape);
+  auto tmaShape = triton::nvidia_gpu::getTMABlockShape(attr, shapePerCTA,
+                                                       /*packedSize=*/true);
+  std::array<int64_t, 2> collapsedTmaShape{1, tmaShape.back()};
+  for (int i = 0; i + 1 < shape.size(); i++)
+    collapsedTmaShape[0] *= tmaShape[i];
+  if (attr.getTransposed()) {
+    std::swap(collapsedTmaShape[0], collapsedTmaShape[1]);
+  }
+
+  int tileRows = 8;
+  int tileCols = 8 * attr.getSwizzlingByteWidth() / elementBitWidth;
+  if (attr.getFp4Padded()) tileCols /= 2;
+
+  int packingFactor = attr.getFp4Padded() ? 2 : 1;
+  if (collapsedTmaShape[1] * packingFactor < tileCols ||
+      collapsedTmaShape[0] < tileRows) {
+    return emitOptionalError(
+        loc,
+        "Illegal shared layout; expected collapsed shapePerCTA to "
+        "be at least [",
+        tileRows, ", ", (tileCols / packingFactor), "], collapsedTmaShape: [",
+        collapsedTmaShape[0], ", ", collapsedTmaShape[1], "]");
+  }
+  return success();
+}
+
+static LogicalResult inferMemDescReshapeOpEncoding(std::optional<Location> loc,
+                                                   ArrayRef<int64_t> srcShape,
                                                    Attribute srcEnc,
                                                    ArrayRef<int64_t> dstShape,
-                                                   Attribute &dstEnc) {
-  // TODO Delete this once SharedLinearEncodingAttr is more widely supported.
+                                                   Attribute& dstEnc) {
   if (auto mmaEncoding = dyn_cast<NVMMASharedEncodingAttr>(srcEnc)) {
     auto *ctx = srcEnc.getContext();
     if (getNumCTAs(mmaEncoding) == 1) {
@@ -598,6 +635,11 @@ static LogicalResult inferMemDescReshapeOpEncoding(ArrayRef<int64_t> srcShape,
             ctx, mmaEncoding.getSwizzlingByteWidth(),
             mmaEncoding.getTransposed(), mmaEncoding.getElementBitWidth(),
             mmaEncoding.getFp4Padded(), CTALayout);
+        if (failed(verifyNVMMASharedEncoding(
+            loc, cast<NVMMASharedEncodingAttr>(candidateEncoding), dstShape,
+            mmaEncoding.getElementBitWidth()))) {
+          return failure();
+        }
         auto srcLL = toLinearLayout(srcShape, srcEnc);
         auto dstLL = toLinearLayout(dstShape, candidateEncoding);
         if (reshapeLayout(ctx, srcLL, dstShape) == dstLL) {
@@ -626,8 +668,8 @@ LogicalResult MemDescReshapeOp::inferReturnTypes(
 
   Attribute dstEncoding;
   if (Attribute srcEnc = srcTy.getEncoding()) {
-    if (failed(inferMemDescReshapeOpEncoding(srcTy.getShape(), srcEnc, dstShape,
-                                             dstEncoding)))
+    if (failed(inferMemDescReshapeOpEncoding(loc, srcTy.getShape(), srcEnc,
+                                             dstShape, dstEncoding)))
       return failure();
   }
 
@@ -918,8 +960,9 @@ void WarpSpecializeOp::getSuccessorRegions(
     return;
   }
   // And the default region branches transparently back to the parent.
-  assert(src.getRegionOrNull() == &getDefaultRegion());
-  successors.push_back(RegionSuccessor(getResults()));
+  assert(src.getTerminatorPredecessorOrNull()->getParentRegion() ==
+         &getDefaultRegion());
+  successors.push_back(RegionSuccessor(getOperation(), getResults()));
 }
 
 LogicalResult WarpSpecializeOp::verify() {

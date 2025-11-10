@@ -1,5 +1,7 @@
 #include "triton/Dialect/TritonNvidiaGPU/Transforms/Utility.h"
 
+#undef LDBG
+
 #define DEBUG_TYPE "ttng-utility"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
