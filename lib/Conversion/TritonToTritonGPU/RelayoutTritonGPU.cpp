@@ -115,7 +115,12 @@ public:
         // clang-format on
         >(typeConverter, context);
 
-    if (failed(applyPartialConversion(mod, target, std::move(patterns))))
+    // config
+    ConversionConfig config;
+    config.allowPatternRollback = false;  // not needed and not supported
+
+    if (failed(
+            applyPartialConversion(mod, target, std::move(patterns), config)))
       return signalPassFailure();
   }
 };

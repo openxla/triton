@@ -1444,9 +1444,10 @@ LinearLayout chooseScaledWmmaScaleLayout(MLIRContext *ctx, int dotOperandIdx,
   // pattern to fill the K dim.
   tileLayout *= LinearLayout::identity1D(kSize / scaleKWidth, kRegister, dimK);
 
-  auto warpsPerCTANew = (dotOperandIdx == 1)
-                            ? SmallVector{warpsPerCTA[1], warpsPerCTA[0]}
-                            : SmallVector{warpsPerCTA[0], warpsPerCTA[1]};
+  auto warpsPerCTANew =
+      (dotOperandIdx == 1)
+          ? SmallVector{warpsPerCTA[1], warpsPerCTA[0]}
+          : SmallVector{warpsPerCTA[0], warpsPerCTA[1]};
 
   auto warpOrder = (dotOperandIdx == 1) ? SmallVector<unsigned>{0, 1}
                                         : SmallVector<unsigned>{1, 0};

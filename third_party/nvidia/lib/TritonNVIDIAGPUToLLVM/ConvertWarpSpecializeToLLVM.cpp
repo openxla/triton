@@ -7,6 +7,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "triton/Conversion/TritonGPUToLLVM/Passes.h"
@@ -91,8 +92,9 @@ static void createBarrier(TritonLLVMIRRewriter &b, unsigned barIdx,
   if (numThreads == 32)
     LLVM::NVIDIA::createSyncWarp(b.getLoc(), b);
   else
-    NVVM::BarrierOp::create(b, b.getLoc(), b.i32_val(barIdx),
-                            b.i32_val(numThreads));
+    mlir::NVVM::BarrierOp::create(b, b.getLoc(), mlir::TypeRange(),
+                                  b.i32_val(barIdx), b.i32_val(numThreads), {},
+                                  {});
 }
 
 static void createAllBarrier(TritonLLVMIRRewriter &b, unsigned barIdx) {
