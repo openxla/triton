@@ -8,7 +8,9 @@ module attributes {"ttg.num-ctas" = 1 : i32, "ttg.num-warps" = 4 : i32} {
     // CHECK: llvm.atomicrmw
     // CHECK: llvm.store
     // CHECK: llvm.br
-    // CHECK: rocdl.barrier
+    // CHECK: llvm.fence
+    // CHECK: rocdl.s.barrier
+    // CHECK: llvm.fence
     // CHECK: llvm.load
     // CHECK: llvm.store
     %0 = tt.atomic_rmw fadd, relaxed, gpu, %arg0, %arg2, %arg1 : (!tt.ptr<f32>, f32, i1) -> f32
